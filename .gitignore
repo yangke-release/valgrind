@@ -1,0 +1,10 @@
+~*
+*.o
+*.lo
+*.la
+*.i
+*.a
+*.S
+Makefile
+*.deb
+*.tar.gz
