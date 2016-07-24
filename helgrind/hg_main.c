@@ -8,10 +8,10 @@
    This file is part of Helgrind, a Valgrind tool for detecting errors
    in threaded programs.
 
-   Copyright (C) 2007-2011 OpenWorks LLP
+   Copyright (C) 2007-2010 OpenWorks LLP
       info@open-works.co.uk
 
-   Copyright (C) 2007-2011 Apple, Inc.
+   Copyright (C) 2007-2010 Apple, Inc.
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -40,6 +40,7 @@
 #include "pub_tool_libcassert.h"
 #include "pub_tool_libcbase.h"
 #include "pub_tool_libcprint.h"
+#include "pub_tool_libcfile.h"
 #include "pub_tool_threadstate.h"
 #include "pub_tool_tooliface.h"
 #include "pub_tool_hashtable.h"
@@ -47,6 +48,7 @@
 #include "pub_tool_machine.h"
 #include "pub_tool_options.h"
 #include "pub_tool_xarray.h"
+#include "pub_tool_mallocfree.h"
 #include "pub_tool_stacktrace.h"
 #include "pub_tool_wordfm.h"
 #include "pub_tool_debuginfo.h" // VG_(find_seginfo), VG_(seginfo_soname)
@@ -64,6 +66,54 @@
 
 #include "helgrind.h"
 
+#include <avalanche.h>
+
+#ifdef WITH_AVALANCHE
+
+VgHashTable basicBlocksTable;
+
+UInt alarm = 0;
+
+extern UShort port;
+extern Bool sockets;
+extern Bool datagrams;
+extern UChar ip1, ip2, ip3, ip4;
+extern Int cursocket;
+extern ULong curoffs;
+
+Bool replace = False;
+Bool isRead = False;
+Bool noCoverage = False;
+extern Bool isRecv;
+
+static Int socketsNum = 0;
+static Int socketsBoundary;
+static replaceData* replace_data;
+static Char* bbFileName = NULL;
+static Char* tempDir;
+static Char* replaceFileName;
+
+static
+Char* concatTempDir(Char* fileName)
+{
+  Char* result;
+  if (tempDir == NULL)
+  {
+    result = VG_(malloc)(fileName, VG_(strlen)(fileName) + 1);
+    VG_(strcpy)(result, fileName);
+  }
+  else
+  {
+    Int length = VG_(strlen)(tempDir);
+    result = VG_(malloc)(fileName, length + VG_(strlen)(fileName) + 1);
+    VG_(strcpy)(result, tempDir);
+    VG_(strcpy)(result + length, fileName);
+    result[length + VG_(strlen)(fileName)] = '\0';
+  }
+  return result;
+}
+
+#endif
 
 // FIXME: new_mem_w_tid ignores the supplied tid. (wtf?!)
 
@@ -136,9 +186,6 @@ static WordFM* map_locks = NULL; /* WordFM LockAddr Lock* */
 /* The word-set universes for lock sets. */
 static WordSetU* univ_lsets = NULL; /* sets of Lock* */
 static WordSetU* univ_laog  = NULL; /* sets of Lock*, for LAOG */
-static Int next_gc_univ_laog = 1;
-/* univ_laog will be garbaged collected when the nr of element in univ_laog is 
-   >= next_gc_univ_laog. */
 
 /* Allow libhb to get at the universe of locksets stored
    here.  Sigh. */
@@ -3303,85 +3350,6 @@ static void laog__show ( Char* who ) {
    VG_(printf)("}\n");
 }
 
-static void univ_laog_do_GC ( void ) {
-   Word i;
-   LAOGLinks* links;
-   Word seen = 0;
-   Int prev_next_gc_univ_laog = next_gc_univ_laog;
-   const UWord univ_laog_cardinality = HG_(cardinalityWSU)( univ_laog);
-
-   Bool *univ_laog_seen = HG_(zalloc) ( "hg.gc_univ_laog.1",
-                                        (Int) univ_laog_cardinality 
-                                        * sizeof(Bool) );
-   // univ_laog_seen[*] set to 0 (False) by zalloc.
-
-   if (VG_(clo_stats))
-      VG_(message)(Vg_DebugMsg,
-                   "univ_laog_do_GC enter cardinality %'10d\n",
-                   (Int)univ_laog_cardinality);
-
-   VG_(initIterFM)( laog );
-   links = NULL;
-   while (VG_(nextIterFM)( laog, NULL, (UWord*)&links )) {
-      tl_assert(links);
-      tl_assert(links->inns >= 0 && links->inns < univ_laog_cardinality);
-      univ_laog_seen[links->inns] = True;
-      tl_assert(links->outs >= 0 && links->outs < univ_laog_cardinality);
-      univ_laog_seen[links->outs] = True;
-      links = NULL;
-   }
-   VG_(doneIterFM)( laog );
-
-   for (i = 0; i < (Int)univ_laog_cardinality; i++) {
-      if (univ_laog_seen[i])
-         seen++;
-      else
-         HG_(dieWS) ( univ_laog, (WordSet)i );
-   }
-
-   HG_(free) (univ_laog_seen);
-
-   // We need to decide the value of the next_gc.
-   // 3 solutions were looked at:
-   // Sol 1: garbage collect at seen * 2
-   //   This solution was a lot slower, probably because we both do a lot of
-   //   garbage collection and do not keep long enough laog WV that will become
-   //   useful  again very soon.
-   // Sol 2: garbage collect at a percentage increase of the current cardinality
-   //         (with a min increase of 1)
-   //   Trials on a small test program with 1%, 5% and 10% increase was done.
-   //   1% is slightly faster than 5%, which is slightly slower than 10%.
-   //   However, on a big application, this caused the memory to be exhausted,
-   //   as even a 1% increase of size at each gc becomes a lot, when many gc
-   //   are done.
-   // Sol 3: always garbage collect at current cardinality + 1.
-   //   This solution was the fastest of the 3 solutions, and caused no memory
-   //   exhaustion in the big application.
-   // 
-   // With regards to cost introduced by gc: on the t2t perf test (doing only
-   // lock/unlock operations), t2t 50 10 2 was about 25% faster than the
-   // version with garbage collection. With t2t 50 20 2, my machine started
-   // to page out, and so the garbage collected version was much faster.
-   // On smaller lock sets (e.g. t2t 20 5 2, giving about 100 locks), the
-   // difference performance is insignificant (~ 0.1 s).
-   // Of course, it might be that real life programs are not well represented
-   // by t2t.
-   
-   // If ever we want to have a more sophisticated control
-   // (e.g. clo options to control the percentage increase or fixed increased),
-   // we should do it here, eg.
-   //     next_gc_univ_laog = prev_next_gc_univ_laog + VG_(clo_laog_gc_fixed);
-   // Currently, we just hard-code the solution 3 above.
-   next_gc_univ_laog = prev_next_gc_univ_laog + 1;
-
-   if (VG_(clo_stats))
-      VG_(message)
-         (Vg_DebugMsg,
-          "univ_laog_do_GC exit seen %'8d next gc at cardinality %'10d\n",
-          (Int)seen, next_gc_univ_laog);
-}
-
-
 __attribute__((noinline))
 static void laog__add_edge ( Lock* src, Lock* dst ) {
    Word       keyW;
@@ -3460,16 +3428,13 @@ static void laog__add_edge ( Lock* src, Lock* dst ) {
          VG_(addToFM)( laog_exposition, (Word)expo2, (Word)NULL );
       }
    }
-
-   if (HG_(cardinalityWSU) (univ_laog) >= next_gc_univ_laog)
-      univ_laog_do_GC();
 }
 
 __attribute__((noinline))
 static void laog__del_edge ( Lock* src, Lock* dst ) {
    Word       keyW;
    LAOGLinks* links;
-   if (0) VG_(printf)("laog__del_edge enter %p %p\n", src, dst);
+   if (0) VG_(printf)("laog__del_edge %p %p\n", src, dst);
    /* Update the out edges for src */
    keyW  = 0;
    links = NULL;
@@ -3486,27 +3451,6 @@ static void laog__del_edge ( Lock* src, Lock* dst ) {
       tl_assert(keyW == (Word)dst);
       links->inns = HG_(delFromWS)( univ_laog, links->inns, (Word)src );
    }
-
-   /* Remove the exposition of src,dst (if present) */
-   {
-      LAOGLinkExposition *fm_expo;
-      
-      LAOGLinkExposition expo;
-      expo.src_ga = src->guestaddr;
-      expo.dst_ga = dst->guestaddr;
-      expo.src_ec = NULL;
-      expo.dst_ec = NULL;
-
-      if (VG_(delFromFM) (laog_exposition, 
-                          (UWord*)&fm_expo, NULL, (UWord)&expo )) {
-         HG_(free) (fm_expo);
-      }
-   }
-
-   /* deleting edges can increase nr of of WS so check for gc. */
-   if (HG_(cardinalityWSU) (univ_laog) >= next_gc_univ_laog)
-      univ_laog_do_GC();
-   if (0) VG_(printf)("laog__del_edge exit\n");
 }
 
 __attribute__((noinline))
@@ -3717,21 +3661,6 @@ static void laog__pre_thread_acquires_lock (
       all_except_Locks__sanity_check("laog__pre_thread_acquires_lock-post");
 }
 
-/* Allocates a duplicate of words. Caller must HG_(free) the result. */
-static UWord* UWordV_dup(UWord* words, Word words_size)
-{
-   UInt i;
-
-   if (words_size == 0)
-      return NULL;
-
-   UWord *dup = HG_(zalloc) ("hg.dup.1", (SizeT) words_size * sizeof(UWord));
-
-   for (i = 0; i < words_size; i++)
-      dup[i] = words[i];
-
-   return dup;
-}
 
 /* Delete from 'laog' any pair mentioning a lock in locksToDelete */
 
@@ -3745,17 +3674,11 @@ static void laog__handle_one_lock_deletion ( Lock* lk )
    preds = laog__preds( lk );
    succs = laog__succs( lk );
 
-   // We need to duplicate the payload, as these can be garbage collected
-   // during the del/add operations below.
    HG_(getPayloadWS)( &preds_words, &preds_size, univ_laog, preds );
-   preds_words = UWordV_dup(preds_words, preds_size);
-
-   HG_(getPayloadWS)( &succs_words, &succs_size, univ_laog, succs );
-   succs_words = UWordV_dup(succs_words, succs_size);
-
    for (i = 0; i < preds_size; i++)
       laog__del_edge( (Lock*)preds_words[i], lk );
 
+   HG_(getPayloadWS)( &succs_words, &succs_size, univ_laog, succs );
    for (j = 0; j < succs_size; j++)
       laog__del_edge( lk, (Lock*)succs_words[j] );
 
@@ -3769,24 +3692,6 @@ static void laog__handle_one_lock_deletion ( Lock* lk )
          }
       }
    }
-
-   if (preds_words)
-      HG_(free) (preds_words);
-   if (succs_words)
-      HG_(free) (succs_words);
-
-   // Remove lk information from laog links FM
-   {
-      LAOGLinks *links;
-      Lock* linked_lk;
-
-      if (VG_(delFromFM) (laog, 
-                          (UWord*)&linked_lk, (UWord*)&links, (UWord)lk)) {
-         tl_assert (linked_lk == lk);
-         HG_(free) (links);
-      }
-   }
-   /* FIXME ??? What about removing lock lk data from EXPOSITION ??? */
 }
 
 //__attribute__((noinline))
@@ -3799,7 +3704,6 @@ static void laog__handle_one_lock_deletion ( Lock* lk )
 //
 //
 //   HG_(getPayloadWS)( &ws_words, &ws_size, univ_lsets, locksToDelete );
-//   UWordV_dup call needed here ...
 //   for (i = 0; i < ws_size; i++)
 //      laog__handle_one_lock_deletion( (Lock*)ws_words[i] );
 //
@@ -4306,6 +4210,13 @@ IRSB* hg_instrument ( VgCallbackClosure* closure,
    if (gWordTy != hWordTy) {
       /* We don't currently support this case. */
       VG_(tool_panic)("host/guest word size mismatch");
+   }
+   
+   if (!noCoverage)
+   {
+     bbNode* n = VG_(malloc)("bbNode", sizeof(bbNode)); 
+     n->key = vge->base[0]; 
+     VG_(HT_add_node)(basicBlocksTable, n);
    }
 
    if (VKI_PAGE_SIZE < 4096 || VG_(log2)(VKI_PAGE_SIZE) == -1) {
@@ -4841,7 +4752,6 @@ Bool hg_handle_client_request ( ThreadId tid, UWord* args, UWord* ret)
    return True;
 }
 
-
 /*----------------------------------------------------------------*/
 /*--- Setup                                                    ---*/
 /*----------------------------------------------------------------*/
@@ -4887,6 +4797,50 @@ static Bool hg_process_cmd_line_option ( Char* arg )
       }
       if (0) VG_(printf)("XXX sanity flags: 0x%lx\n", HG_(clo_sanity_flags));
    }
+#ifdef WITH_AVALANCHE
+   else if (VG_INT_CLO(arg, "--alarm", alarm)) { 
+      return True;
+   }
+   else if (VG_STR_CLO(arg, "--port", tmp_str)) {
+      port = (UShort) VG_(strtoll10)(tmp_str, NULL);
+      return True;
+   }
+   else if (VG_BOOL_CLO(arg, "--sockets", sockets)) { 
+      return True; 
+   }
+   else if (VG_BOOL_CLO(arg, "--datagrams", datagrams)) { 
+      return True; 
+   }
+   else if (VG_BOOL_CLO(arg, "--no-coverage", noCoverage)) { 
+      return True; 
+   }
+   else if (VG_STR_CLO(arg, "--filename", bbFileName)) {
+      return True;
+   }
+   else if (VG_STR_CLO(arg, "--temp-dir", tempDir)) {
+      return True;
+   }
+   else if (VG_STR_CLO(arg, "--replace",  replaceFileName)) { 
+      replace = True;
+      return True; 
+   }
+   else if (VG_STR_CLO(arg, "--host", tmp_str)) {
+      Char* dot = VG_(strchr)(tmp_str, '.');
+      *dot = '\0';
+      ip1 = (UShort) VG_(strtoll10)(tmp_str, NULL);
+      tmp_str = dot + 1;
+      dot = VG_(strchr)(tmp_str, '.');
+      *dot = '\0';
+      ip2 = (UShort) VG_(strtoll10)(tmp_str, NULL);
+      tmp_str = dot + 1;
+      dot = VG_(strchr)(tmp_str, '.');
+      *dot = '\0';
+      ip3 = (UShort) VG_(strtoll10)(tmp_str, NULL);
+      tmp_str = dot + 1;
+      ip4 = (UShort) VG_(strtoll10)(tmp_str, NULL);
+      return True;
+   }
+#endif
 
    else if VG_BOOL_CLO(arg, "--free-is-write",
                             HG_(clo_free_is_write)) {}
@@ -4946,6 +4900,33 @@ static void hg_print_debug_usage ( void )
 
 static void hg_fini ( Int exitcode )
 {
+#ifdef WITH_AVALANCHE
+   if (!noCoverage)
+   {
+      VG_(HT_ResetIter)(basicBlocksTable);
+      bbNode* n = (bbNode*) VG_(HT_Next)(basicBlocksTable);
+      SysRes fd;
+      Char *bbFile;
+      if (bbFileName != NULL) {
+         bbFile = concatTempDir(bbFileName);
+      } else {
+         bbFile = concatTempDir("basic_blocks.log");
+      }
+      fd = VG_(open)(bbFile, 
+                     VKI_O_WRONLY | VKI_O_TRUNC | VKI_O_CREAT, 
+                     VKI_S_IRUSR | VKI_S_IROTH | VKI_S_IRGRP |
+                        VKI_S_IWUSR | VKI_S_IWOTH | VKI_S_IWGRP);
+      VG_(free)(bbFile);
+      if (!sr_isError(fd)) {
+         while (n != NULL) {
+            UWord addr = n->key;
+            VG_(write)(sr_Res(fd), &addr, sizeof(addr));
+            n = (bbNode*) VG_(HT_Next)(basicBlocksTable);
+         }
+         VG_(close)(sr_Res(fd));
+      }
+   }
+#endif
    if (VG_(clo_verbosity) == 1 && !VG_(clo_xml)) {
       VG_(message)(Vg_UserMsg, 
                    "For counts of detected and suppressed errors, "
@@ -5063,6 +5044,39 @@ ExeContext* for_libhb__get_EC ( Thr* hbt )
 
 static void hg_post_clo_init ( void )
 {
+#ifdef WITH_AVALANCHE  
+   if (replace) {
+      Int i;
+      Char *replaceFile = concatTempDir(replaceFileName);
+      SysRes fd = VG_(open)(replaceFile, 
+                            VKI_O_RDWR, 
+                            VKI_S_IRWXU | VKI_S_IRWXG | VKI_S_IRWXO);
+      if (sr_isError(fd)) {
+         VG_(write)(2, "helgrind: cannot open replace_data",
+                    VG_(strlen)("helgrind: cannot open replace_data"));
+         VG_(exit)(1);
+      }
+      VG_(read)(sr_Res(fd), &socketsNum, 4);
+      if (socketsNum > 0) {
+         replace_data = (replaceData*) 
+                 VG_(malloc)("replace_data", socketsNum * sizeof(replaceData));
+         for (i = 0; i < socketsNum; i++) {
+           VG_(read)(sr_Res(fd), &(replace_data[i].length), sizeof(Int));
+           replace_data[i].data = 
+               (Char*) VG_(malloc)("replace_data", replace_data[i].length);
+           VG_(read)(sr_Res(fd), replace_data[i].data, replace_data[i].length);
+         }
+      } else {
+         replace_data = NULL;
+      }
+      VG_(close)(sr_Res(fd));
+      VG_(free)(replaceFile);
+   }
+
+   if (alarm != 0) {
+      VG_(alarm)(alarm);
+   }
+#endif
    Thr* hbthr_root;
 
    /////////////////////////////////////////////
@@ -5083,7 +5097,7 @@ static void hg_pre_clo_init ( void )
    VG_(details_version)         (NULL);
    VG_(details_description)     ("a thread error detector");
    VG_(details_copyright_author)(
-      "Copyright (C) 2007-2011, and GNU GPL'd, by OpenWorks LLP et al.");
+      "Copyright (C) 2007-2010, and GNU GPL'd, by OpenWorks LLP et al.");
    VG_(details_bug_reports_to)  (VG_BUGS_TO);
    VG_(details_avg_translation_sizeB) ( 320 );
 
@@ -5171,6 +5185,10 @@ static void hg_pre_clo_init ( void )
    tl_assert( sizeof(UWord) == sizeof(Addr) );
    hg_mallocmeta_table
       = VG_(HT_construct)( "hg_malloc_metadata_table" );
+      
+#ifdef WITH_AVALANCHE
+   basicBlocksTable = VG_(HT_construct)("basicBlocksTable");
+#endif
 
    // add a callback to clean up on (threaded) fork.
    VG_(atfork)(NULL/*pre*/, NULL/*parent*/, evh__atfork_child/*child*/);
