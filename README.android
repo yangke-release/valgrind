@@ -1,6 +1,5 @@
 
-How to cross-compile for Android.  These notes were last updated on 
-27 Sept 2011, for Valgrind SVN revision 12060/2209.
+How to cross-compile for Android.
 
 This is known to work at least for Android 2.3.4 running on a (rooted,
 AOSP build) Nexus S.  It has also worked in the past on a
@@ -9,57 +8,38 @@ Other configurations and toolchains might work, but haven't been
 tested.  Feedback is welcome.
 
 You need the android-ndk-r6 native development kit.  Install it
-somewhere.  Doesn't matter where.  Then do this:
+somewhere.  Then do this:
 
 
-# Modify this (obviously).  Note, this "export" command is only done
-# so as to reduce the amount of typing required.  None of the commands
-# below read it as part of their operation.
+# Modify this (obviously).
 #
 export NDKROOT=/path/to/android-ndk-r6
 
 
-# Modify this too.  Tell the build system which Android hardware you
-# are building for.  It needs to know this so it can compile in
-# support for the right Android-hw-specific ioctls.  (sigh.)  As with
-# NDKROOT above, this is merely to avoid repeated typing; none of the
-# commands read it.
+# And then (unmodified)
 #
-# Currently the supported values are:  nexus_s pandaboard
-# So choose one of the below:
-#
-export HWKIND=nexus_s         # Samsung Nexus S
-export HWKIND=pandaboard      # Pandaboard running Linaro Android
+export AR=$NDKROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-ar
+export CPP=$NDKROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-cpp
+export LD=$NDKROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-ld
+export CXX=$NDKROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-g++
+export CC=$NDKROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-gcc
+
 
 # Then cd to the root of your Valgrind source tree.
 #
 cd /path/to/valgrind/source/tree
 
 
-# After this point, you don't need to modify anything; just copy and
-# paste the commands below.
-
-
-# Set up toolchain paths.
-#
-export AR=$NDKROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-ar
-export LD=$NDKROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-ld
-export CC=$NDKROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-gcc
-
-
 # Do configuration stuff.  Don't mess with the --prefix in the
 # configure command below, even if you think it's wrong.
-# You may need to set the --with-tmpdir path to something
-# different if /sdcard doesn't work on the device -- this is
-# a known cause of difficulties.
 
 ./autogen.sh
 
-CPPFLAGS="--sysroot=$NDKROOT/platforms/android-3/arch-arm -DANDROID_HARDWARE_$HWKIND" \
+CPPFLAGS="--sysroot=$NDKROOT/platforms/android-3/arch-arm" \
    CFLAGS="--sysroot=$NDKROOT/platforms/android-3/arch-arm" \
    ./configure --prefix=/data/local/Inst \
    --host=armv7-unknown-linux --target=armv7-unknown-linux \
-   --with-tmpdir=/sdcard
+   --with-tmpdir=/data/local/tmp
 
 
 # At the end of the configure run, a few lines of details

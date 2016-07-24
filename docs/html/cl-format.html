@@ -3,8 +3,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>3. Callgrind Format Specification</title>
 <link rel="stylesheet" href="vg_basic.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
-<link rel="home" href="index.html" title="Valgrind Documentation">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="index.html" title="Valgrind Documentation">
 <link rel="up" href="tech-docs.html" title="Valgrind Technical Documentation">
 <link rel="prev" href="manual-writing-tools.html" title="2. Writing a New Valgrind Tool">
 <link rel="next" href="dist.html" title="Valgrind Distribution Documents">
@@ -17,7 +17,7 @@
 <th align="center" valign="middle">Valgrind Technical Documentation</th>
 <td width="22px" align="center" valign="middle"><a accesskey="n" href="dist.html"><img src="images/next.png" width="18" height="21" border="0" alt="Next"></a></td>
 </tr></table></div>
-<div class="chapter" title="3. Callgrind Format Specification">
+<div class="chapter" lang="en">
 <div class="titlepage"><div><div><h2 class="title">
 <a name="cl-format"></a>3. Callgrind Format Specification</h2></div></div></div>
 <div class="toc">
@@ -47,7 +47,7 @@ the same since Callgrind was previously named Calltree.</p>
 <p>The format description is meant for the user to be able to understand the
 file contents; but more important, it is given for authors of measurement or
 visualization tools to be able to write and read this format.</p>
-<div class="sect1" title="3.1. Overview">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="cl-format.overview"></a>3.1. Overview</h2></div></div></div>
 <p>The profile data format is ASCII based.
@@ -56,7 +56,7 @@ to the format used by Cachegrind (ie. Cachegrind uses a subset). It can
 be read by callgrind_annotate and KCachegrind.</p>
 <p>This chapter gives on overview of format features and examples.
 For detailed syntax, look at the format reference.</p>
-<div class="sect2" title="3.1.1. Basic Structure">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.overview.basics"></a>3.1.1. Basic Structure</h3></div></div></div>
 <p>Each file has a header part of an arbitrary number of lines of the
@@ -73,7 +73,7 @@ specifications of the form "spec=name". "spec" can be e.g. "fn" for a
 function name or "fl" for a file name. Cost lines are always related to
 the function/file specifications given directly before.</p>
 </div>
-<div class="sect2" title="3.1.2. Simple Example">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.overview.example1"></a>3.1.2. Simple Example</h3></div></div></div>
 <p>The event names in the following example are quite arbitrary, and are not
@@ -112,7 +112,7 @@ there is no specification of how many times function
 <code class="function">main</code> actually was
 called: profile data only contains sums.</p>
 </div>
-<div class="sect2" title="3.1.3. Associations">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.overview.associations"></a>3.1.3. Associations</h3></div></div></div>
 <p>The most important extension to the original format of Cachegrind is the
@@ -135,7 +135,7 @@ that inclusive cost spent inside of the function call has to be specified.</p>
 <p>Other associations are for example (conditional) jumps. See the
 reference below for details.</p>
 </div>
-<div class="sect2" title="3.1.4. Extended Example">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.overview.example2"></a>3.1.4. Extended Example</h3></div></div></div>
 <p>The following example shows 3 functions, <code class="function">main</code>,
@@ -179,7 +179,7 @@ is not needed. The function <code class="function">func1</code> only consists of
 at line 51 of <code class="filename">file1.c</code>, where <code class="function">func2</code>
 is called.</p>
 </div>
-<div class="sect2" title="3.1.5. Name Compression">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.overview.compression1"></a>3.1.5. Name Compression</h3></div></div></div>
 <p>With the introduction of association specifications like calls it is
@@ -239,7 +239,7 @@ fn=(1)
 16 20
 ...</pre>
 </div>
-<div class="sect2" title="3.1.6. Subposition Compression">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.overview.compression2"></a>3.1.6. Subposition Compression</h3></div></div></div>
 <p>If a Callgrind data file should hold costs for each assembler instruction
@@ -281,10 +281,10 @@ fn=func
 be corrected to correspond to addresses found in the original binary. I.e. for
 relocatable shared objects, often a load offset has to be subtracted.</p>
 </div>
-<div class="sect2" title="3.1.7. Miscellaneous">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.overview.misc"></a>3.1.7. Miscellaneous</h3></div></div></div>
-<div class="sect3" title="3.1.7.1. Cost Summary Information">
+<div class="sect3" lang="en">
 <div class="titlepage"><div><div><h4 class="title">
 <a name="cl-format.overview.misc.summary"></a>3.1.7.1. Cost Summary Information</h4></div></div></div>
 <p>For the visualization to be able to show cost percentage, a sum of the
@@ -294,7 +294,7 @@ can specify a "summary:" line in the header giving the full cost for the
 profile run. This has another effect: a import filter can show a progress bar
 while loading a large data file if he knows to cost sum in advance.</p>
 </div>
-<div class="sect3" title="3.1.7.2. Long Names for Event Types and inherited Types">
+<div class="sect3" lang="en">
 <div class="titlepage"><div><div><h4 class="title">
 <a name="cl-format.overview.misc.events"></a>3.1.7.2. Long Names for Event Types and inherited Types</h4></div></div></div>
 <p>Event types for cost lines are specified in the "events:" line with an
@@ -316,10 +316,10 @@ for "Ir and "Dr".</p>
 </div>
 </div>
 </div>
-<div class="sect1" title="3.2. Reference">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="cl-format.reference"></a>3.2. Reference</h2></div></div></div>
-<div class="sect2" title="3.2.1. Grammar">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.reference.grammar"></a>3.2.1. Grammar</h3></div></div></div>
 <p>
@@ -446,35 +446,35 @@ for "Ir and "Dr".</p>
 <p>
 </p>
 </div>
-<div class="sect2" title="3.2.2. Description of Header Lines">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.reference.header"></a>3.2.2. Description of Header Lines</h3></div></div></div>
 <p>The header has an arbitrary number of lines of the format 
 "key: value". Possible <span class="emphasis"><em>key</em></span> values for the header are:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem">
+<div class="itemizedlist"><ul type="disc">
+<li>
 <p><code class="computeroutput">version: number</code> [Callgrind]</p>
 <p>This is used to distinguish future profile data formats.  A 
     major version of 0 or 1 is supposed to be upwards compatible with 
     Cachegrind's format.  It is optional; if not appearing, version 1 
     is supposed.  Otherwise, this has to be the first header line.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">pid: process id</code> [Callgrind]</p>
 <p>This specifies the process ID of the supervised application 
     for which this profile was generated.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">cmd: program name + args</code> [Cachegrind]</p>
 <p>This specifies the full command line of the supervised
     application for which this profile was generated.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">part: number</code> [Callgrind]</p>
 <p>This specifies a sequentially incremented number for each dump 
     generated, starting at 1.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">desc: type: value</code> [Cachegrind]</p>
 <p>This specifies various information for this dump.  For some 
     types, the semantic is defined, but any description type is allowed. 
@@ -487,7 +487,7 @@ for "Ir and "Dr".</p>
     Type "Trigger" states the reason of why this trace was generated.
     E.g. program termination or forced interactive dump.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">positions: [instr] [line]</code> [Callgrind]</p>
 <p>For cost lines, this defines the semantic of the first numbers. 
     Any combination of "instr", "bb" and "line" is allowed, but has to be 
@@ -504,7 +504,7 @@ for "Ir and "Dr".</p>
 <p>This field is optional. If not specified, "line" is supposed 
     only.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">events: event type abbreviations</code> [Cachegrind]</p>
 <p>A list of short names of the event types logged in this file. 
     The order is the same as in cost lines.  The first event type is the
@@ -513,16 +513,16 @@ for "Ir and "Dr".</p>
     exactly once.</p>
 <p>Cost types from original Cachegrind are:
       </p>
-<div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p><span class="command"><strong>Ir</strong></span>: Instruction read access</p></li>
-<li class="listitem"><p><span class="command"><strong>I1mr</strong></span>: Instruction Level 1 read cache miss</p></li>
-<li class="listitem"><p><span class="command"><strong>ILmr</strong></span>: Instruction last-level read cache miss</p></li>
-<li class="listitem"><p>...</p></li>
+<div class="itemizedlist"><ul type="circle">
+<li><p><span class="command"><strong>Ir</strong></span>: Instruction read access</p></li>
+<li><p><span class="command"><strong>I1mr</strong></span>: Instruction Level 1 read cache miss</p></li>
+<li><p><span class="command"><strong>ILmr</strong></span>: Instruction last-level read cache miss</p></li>
+<li><p>...</p></li>
 </ul></div>
 <p>
     </p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">summary: costs</code> [Callgrind]</p>
 <p><code class="computeroutput">totals: costs</code> [Cachegrind]</p>
 <p>The value or the total number of events covered by this trace
@@ -534,7 +534,7 @@ for "Ir and "Dr".</p>
 </li>
 </ul></div>
 </div>
-<div class="sect2" title="3.2.3. Description of Body Lines">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="cl-format.reference.body"></a>3.2.3. Description of Body Lines</h3></div></div></div>
 <p>There exist lines
@@ -552,39 +552,39 @@ the file; it makes the (<span class="emphasis"><em>number</em></span>) an alias 
 <span class="emphasis"><em>position</em></span>.  Compressed format is always
 optional.</p>
 <p>Position specifications allowed:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem">
+<div class="itemizedlist"><ul type="disc">
+<li>
 <p><code class="computeroutput">ob=</code> [Callgrind]</p>
 <p>The ELF object where the cost of next cost lines happens.</p>
 </li>
-<li class="listitem"><p><code class="computeroutput">fl=</code> [Cachegrind]</p></li>
-<li class="listitem"><p><code class="computeroutput">fi=</code> [Cachegrind]</p></li>
-<li class="listitem">
+<li><p><code class="computeroutput">fl=</code> [Cachegrind]</p></li>
+<li><p><code class="computeroutput">fi=</code> [Cachegrind]</p></li>
+<li>
 <p><code class="computeroutput">fe=</code> [Cachegrind]</p>
 <p>The source file including the code which is responsible for
     the cost of next cost lines. "fi="/"fe=" is used when the source
     file changes inside of a function, i.e. for inlined code.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">fn=</code> [Cachegrind]</p>
 <p>The name of the function where the cost of next cost lines 
     happens.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">cob=</code> [Callgrind]</p>
 <p>The ELF object of the target of the next call cost lines.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">cfl=</code> [Callgrind]</p>
 <p>The source file including the code of the target of the
     next call cost lines.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">cfn=</code> [Callgrind]</p>
 <p>The name of the target function of the next call cost 
     lines.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">calls=</code> [Callgrind]</p>
 <p>The number of nonrecursive calls which are responsible for the 
     cost specified by the next call cost line. This is the cost spent 
@@ -593,12 +593,12 @@ optional.</p>
     spent in the called function. The first number is the source line 
     from where the call happened.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">jump=count target position</code> [Callgrind]</p>
 <p>Unconditional jump, executed count times, to the given target
     position.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="computeroutput">jcnd=exe.count jumpcount target position</code> [Callgrind]</p>
 <p>Conditional jump, executed exe.count times with jumpcount 
     jumps to the given target position.</p>

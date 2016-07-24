@@ -3,8 +3,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>4. Memcheck: a memory error detector</title>
 <link rel="stylesheet" href="vg_basic.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
-<link rel="home" href="index.html" title="Valgrind Documentation">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="index.html" title="Valgrind Documentation">
 <link rel="up" href="manual.html" title="Valgrind User Manual">
 <link rel="prev" href="manual-core-adv.html" title="3. Using and understanding the Valgrind core: Advanced Topics">
 <link rel="next" href="cg-manual.html" title="5. Cachegrind: a cache and branch-prediction profiler">
@@ -17,7 +17,7 @@
 <th align="center" valign="middle">Valgrind User Manual</th>
 <td width="22px" align="center" valign="middle"><a accesskey="n" href="cg-manual.html"><img src="images/next.png" width="18" height="21" border="0" alt="Next"></a></td>
 </tr></table></div>
-<div class="chapter" title="4. Memcheck: a memory error detector">
+<div class="chapter" lang="en">
 <div class="titlepage"><div><div><h2 class="title">
 <a name="mc-manual"></a>4. Memcheck: a memory error detector</h2></div></div></div>
 <div class="toc">
@@ -62,39 +62,39 @@ function</a></span></dt>
 <p>To use this tool, you may specify <code class="option">--tool=memcheck</code>
 on the Valgrind command line.  You don't have to, though, since Memcheck
 is the default tool.</p>
-<div class="sect1" title="4.1. Overview">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="mc-manual.overview"></a>4.1. Overview</h2></div></div></div>
 <p>Memcheck is a memory error detector.  It can detect the following
 problems that are common in C and C++ programs.</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>Accessing memory you shouldn't, e.g. overrunning and underrunning
+<div class="itemizedlist"><ul type="disc">
+<li><p>Accessing memory you shouldn't, e.g. overrunning and underrunning
     heap blocks, overrunning the top of the stack, and accessing memory after
     it has been freed.</p></li>
-<li class="listitem"><p>Using undefined values, i.e. values that have not been initialised,
+<li><p>Using undefined values, i.e. values that have not been initialised,
     or that have been derived from other undefined values.</p></li>
-<li class="listitem"><p>Incorrect freeing of heap memory, such as double-freeing heap
+<li><p>Incorrect freeing of heap memory, such as double-freeing heap
     blocks, or mismatched use of
     <code class="function">malloc</code>/<code class="computeroutput">new</code>/<code class="computeroutput">new[]</code>
     versus
     <code class="function">free</code>/<code class="computeroutput">delete</code>/<code class="computeroutput">delete[]</code></p></li>
-<li class="listitem"><p>Overlapping <code class="computeroutput">src</code> and
+<li><p>Overlapping <code class="computeroutput">src</code> and
     <code class="computeroutput">dst</code> pointers in
     <code class="computeroutput">memcpy</code> and related
     functions.</p></li>
-<li class="listitem"><p>Memory leaks.</p></li>
+<li><p>Memory leaks.</p></li>
 </ul></div>
 <p>Problems like these can be difficult to find by other means,
 often remaining undetected for long periods, then causing occasional,
 difficult-to-diagnose crashes.</p>
 </div>
-<div class="sect1" title="4.2. Explanation of error messages from Memcheck">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="mc-manual.errormsgs"></a>4.2. Explanation of error messages from Memcheck</h2></div></div></div>
 <p>Memcheck issues a range of error messages.  This section presents a
 quick summary of what error messages mean.  The precise behaviour of the
 error-checking machinery is described in <a class="xref" href="mc-manual.html#mc-manual.machine" title="4.5. Details of Memcheck's checking machinery">Details of Memcheck's checking machinery</a>.</p>
-<div class="sect2" title="4.2.1. Illegal read / Illegal write errors">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.badrw"></a>4.2.1. Illegal read / Illegal write errors</h3></div></div></div>
 <p>For example:</p>
@@ -133,7 +133,7 @@ fate -- but you will get a message from Memcheck immediately prior to
 this.  In this particular example, reading junk on the stack is
 non-fatal, and the program stays alive.</p>
 </div>
-<div class="sect2" title="4.2.2. Use of uninitialised values">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.uninitvals"></a>4.2.2. Use of uninitialised values</h3></div></div></div>
 <p>For example:</p>
@@ -166,10 +166,10 @@ the value being passed to <code class="function">_IO_printf</code> and thence to
 <code class="varname">x</code> so it can turn it into the corresponding ASCII string,
 and it is at this point that Memcheck complains.</p>
 <p>Sources of uninitialised data tend to be:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>Local variables in procedures which have not been initialised,
+<div class="itemizedlist"><ul type="disc">
+<li><p>Local variables in procedures which have not been initialised,
     as in the example above.</p></li>
-<li class="listitem"><p>The contents of heap blocks (allocated with
+<li><p>The contents of heap blocks (allocated with
     <code class="function">malloc</code>, <code class="function">new</code>, or a similar
     function) before you (or a constructor) write something there.
     </p></li>
@@ -179,19 +179,19 @@ program, use the <code class="option">--track-origins=yes</code> option.  This
 makes Memcheck run more slowly, but can make it much easier to track down
 the root causes of uninitialised value errors.</p>
 </div>
-<div class="sect2" title="4.2.3. Use of uninitialised or unaddressable values in system calls">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.bad-syscall-args"></a>4.2.3. Use of uninitialised or unaddressable values in system
        calls</h3></div></div></div>
 <p>Memcheck checks all parameters to system calls:
 </p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>It checks all the direct parameters themselves, whether they are
+<div class="itemizedlist"><ul type="disc">
+<li><p>It checks all the direct parameters themselves, whether they are
     initialised.</p></li>
-<li class="listitem"><p>Also, if a system call needs to read from a buffer provided by
+<li><p>Also, if a system call needs to read from a buffer provided by
     your program, Memcheck checks that the entire buffer is addressable
     and its contents are initialised.</p></li>
-<li class="listitem"><p>Also, if the system call needs to write to a user-supplied
+<li><p>Also, if the system call needs to write to a user-supplied
     buffer, Memcheck checks that the buffer is addressable.</p></li>
 </ul></div>
 <p>
@@ -234,7 +234,7 @@ error refers to the memory pointed to by
 refers directly to <code class="computeroutput">exit</code>'s argument
 <code class="computeroutput">arr2[0]</code>.</p>
 </div>
-<div class="sect2" title="4.2.4. Illegal frees">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.badfrees"></a>4.2.4. Illegal frees</h3></div></div></div>
 <p>For example:</p>
@@ -258,7 +258,7 @@ duplicate frees of the same block easy to spot.  You will also get this
 message if you try to free a pointer that doesn't point to the start of a
 heap block.</p>
 </div>
-<div class="sect2" title="4.2.5. When a heap block is freed with an inappropriate deallocation function">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.rudefn"></a>4.2.5. When a heap block is freed with an inappropriate deallocation
 function</h3></div></div></div>
@@ -279,17 +279,17 @@ Mismatched free() / delete / delete []
 </pre>
 <p>In <code class="literal">C++</code> it's important to deallocate memory in a
 way compatible with how it was allocated.  The deal is:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>If allocated with
+<div class="itemizedlist"><ul type="disc">
+<li><p>If allocated with
     <code class="function">malloc</code>,
     <code class="function">calloc</code>,
     <code class="function">realloc</code>,
     <code class="function">valloc</code> or
     <code class="function">memalign</code>, you must
     deallocate with <code class="function">free</code>.</p></li>
-<li class="listitem"><p>If allocated with <code class="function">new</code>, you must deallocate
+<li><p>If allocated with <code class="function">new</code>, you must deallocate
    with <code class="function">delete</code>.</p></li>
-<li class="listitem"><p>If allocated with <code class="function">new[]</code>, you must
+<li><p>If allocated with <code class="function">new[]</code>, you must
     deallocate with <code class="function">delete[]</code>.</p></li>
 </ul></div>
 <p>The worst thing is that on Linux apparently it doesn't matter if
@@ -305,7 +305,7 @@ destructor of the array's content just before the pointer actually
 returned.  <code class="function">delete</code> doesn't account for this and will get
 confused, possibly corrupting the heap.</p>
 </div>
-<div class="sect2" title="4.2.6. Overlapping source and destination blocks">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.overlap"></a>4.2.6. Overlapping source and destination blocks</h3></div></div></div>
 <p>The following C library functions copy some data from one
@@ -342,7 +342,7 @@ destination's cache line(s) can improve performance.</p>
 code, don't make any assumptions about the language
 implementation.</p>
 </div>
-<div class="sect2" title="4.2.7. Memory leak detection">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.leaks"></a>4.2.7. Memory leak detection</h3></div></div></div>
 <p>Memcheck keeps track of all heap blocks issued in response to
@@ -359,16 +359,16 @@ accessible client memory, including stacks.</p>
 "start-pointer", i.e. a pointer to the start of the block.  The second is with
 an "interior-pointer", i.e. a pointer to the middle of the block.  There are
 three ways we know of that an interior-pointer can occur:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>The pointer might have originally been a start-pointer and have been
+<div class="itemizedlist"><ul type="disc">
+<li><p>The pointer might have originally been a start-pointer and have been
     moved along deliberately (or not deliberately) by the program.  In
     particular, this can happen if your program uses tagged pointers, i.e.
     if it uses the bottom one, two or three bits of a pointer, which are
     normally always zero due to alignment, in order to store extra
     information.</p></li>
-<li class="listitem"><p>It might be a random junk value in memory, entirely unrelated, just
+<li><p>It might be a random junk value in memory, entirely unrelated, just
     a coincidence.</p></li>
-<li class="listitem"><p>It might be a pointer to an array of C++ objects (which possess
+<li><p>It might be a pointer to an array of C++ objects (which possess
     destructors) allocated with <code class="computeroutput">new[]</code>.  In
     this case, some compilers store a "magic cookie" containing the array
     length at the start of the allocated block, and return a pointer to just
@@ -409,21 +409,21 @@ Category legend:
 <p>Every possible case can be reduced to one of the above nine.  Memcheck
 merges some of these cases in its output, resulting in the following four
 categories.</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>"Still reachable". This covers cases 1 and 2 (for the BBB blocks)
+<div class="itemizedlist"><ul type="disc">
+<li><p>"Still reachable". This covers cases 1 and 2 (for the BBB blocks)
     above.  A start-pointer or chain of start-pointers to the block is
     found.  Since the block is still pointed at, the programmer could, at
     least in principle, have freed it before program exit.  Because these
     are very common and arguably not a problem, Memcheck won't report such
     blocks individually unless <code class="option">--show-reachable=yes</code> is
     specified.</p></li>
-<li class="listitem"><p>"Definitely lost".  This covers case 3 (for the BBB blocks) above.
+<li><p>"Definitely lost".  This covers case 3 (for the BBB blocks) above.
     This means that no pointer to the block can be found.  The block is
     classified as "lost", because the programmer could not possibly have
     freed it at program exit, since no pointer to it exists.  This is likely
     a symptom of having lost the pointer at some earlier point in the
     program.  Such cases should be fixed by the programmer.</p></li>
-<li class="listitem"><p>"Indirectly lost".  This covers cases 4 and 9 (for the BBB blocks)
+<li><p>"Indirectly lost".  This covers cases 4 and 9 (for the BBB blocks)
     above.  This means that the block is lost, not because there are no
     pointers to it, but rather because all the blocks that point to it are
     themselves lost.  For example, if you have a binary tree and the root
@@ -431,7 +431,7 @@ categories.</p>
     the problem will disappear if the definitely lost block that caused the
     indirect leak is fixed, Memcheck won't report such blocks individually
     unless <code class="option">--show-reachable=yes</code> is specified.</p></li>
-<li class="listitem"><p>"Possibly lost".  This covers cases 5--8 (for the BBB blocks)
+<li><p>"Possibly lost".  This covers cases 5--8 (for the BBB blocks)
     above.  This means that a chain of one or more pointers to the block has
     been found, but at least one of the pointers is an interior-pointer.
     This could just be a random value in memory that happens to point into a
@@ -502,13 +502,13 @@ and which should not?  The answer to this question affects the numbers printed
 in the <code class="computeroutput">ERROR SUMMARY</code> line, and also the effect
 of the <code class="option">--error-exitcode</code> option.  Memcheck uses the following
 criteria:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>First, a leak is only counted as a true "error" if
+<div class="itemizedlist"><ul type="disc">
+<li><p>First, a leak is only counted as a true "error" if
     <code class="option">--leak-check=full</code> is specified.  In other words, an
     unprinted leak is not considered a true "error".  If this were not the
     case, it would be possible to get a high error count but not have any
     errors printed, which would be confusing.</p></li>
-<li class="listitem"><p>After that, definitely lost and possibly lost blocks are counted as
+<li><p>After that, definitely lost and possibly lost blocks are counted as
     true "errors".  Indirectly lost and still reachable blocks are not counted
     as true "errors", even if <code class="option">--show-reachable=yes</code> is
     specified and they are printed;  this is because such blocks don't need
@@ -517,7 +517,7 @@ criteria:</p>
 </ul></div>
 </div>
 </div>
-<div class="sect1" title="4.3. Memcheck Command-Line Options">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="mc-manual.options"></a>4.3. Memcheck Command-Line Options</h2></div></div></div>
 <div class="variablelist">
@@ -681,23 +681,6 @@ criteria:</p>
       blocks which would otherwise go undetected.</p>
 </dd>
 <dt>
-<a name="opt.freelist-big-blocks"></a><span class="term">
-      <code class="option">--freelist-big-blocks=&lt;number&gt; [default: 1000000] </code>
-    </span>
-</dt>
-<dd>
-<p>When making blocks from the queue of freed blocks available
-      for re-allocation, Memcheck will in priority re-circulate the blocks
-      with a size greater or equal to <code class="option">--freelist-big-blocks</code>.
-      This ensures that freeing big blocks (in particular freeing blocks bigger than
-      <code class="option">--freelist-vol</code>) does not immediately lead to a re-circulation
-      of all (or a lot of) the small blocks in the free list. In other words,
-      this option increases the likelihood to discover dangling pointers
-      for the "small" blocks, even when big blocks are freed.</p>
-<p>Setting a value of 0 means that all the blocks are re-circulated
-      in a FIFO order. </p>
-</dd>
-<dt>
 <a name="opt.workaround-gcc296-bugs"></a><span class="term">
       <code class="option">--workaround-gcc296-bugs=&lt;yes|no&gt; [default: no] </code>
     </span>
@@ -757,7 +740,7 @@ criteria:</p>
 </dl>
 </div>
 </div>
-<div class="sect1" title="4.4. Writing suppression files">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="mc-manual.suppfiles"></a>4.4. Writing suppression files</h2></div></div></div>
 <p>The basic suppression format is described in 
@@ -766,35 +749,35 @@ criteria:</p>
 <pre class="programlisting">
 Memcheck:suppression_type</pre>
 <p>The Memcheck suppression types are as follows:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p><code class="varname">Value1</code>, 
+<div class="itemizedlist"><ul type="disc">
+<li><p><code class="varname">Value1</code>, 
     <code class="varname">Value2</code>,
     <code class="varname">Value4</code>,
     <code class="varname">Value8</code>,
     <code class="varname">Value16</code>,
     meaning an uninitialised-value error when
     using a value of 1, 2, 4, 8 or 16 bytes.</p></li>
-<li class="listitem"><p><code class="varname">Cond</code> (or its old
+<li><p><code class="varname">Cond</code> (or its old
     name, <code class="varname">Value0</code>), meaning use
     of an uninitialised CPU condition code.</p></li>
-<li class="listitem"><p><code class="varname">Addr1</code>,
+<li><p><code class="varname">Addr1</code>,
     <code class="varname">Addr2</code>, 
     <code class="varname">Addr4</code>,
     <code class="varname">Addr8</code>,
     <code class="varname">Addr16</code>, 
     meaning an invalid address during a
     memory access of 1, 2, 4, 8 or 16 bytes respectively.</p></li>
-<li class="listitem"><p><code class="varname">Jump</code>, meaning an
+<li><p><code class="varname">Jump</code>, meaning an
     jump to an unaddressable location error.</p></li>
-<li class="listitem"><p><code class="varname">Param</code>, meaning an
+<li><p><code class="varname">Param</code>, meaning an
     invalid system call parameter error.</p></li>
-<li class="listitem"><p><code class="varname">Free</code>, meaning an
+<li><p><code class="varname">Free</code>, meaning an
     invalid or mismatching free.</p></li>
-<li class="listitem"><p><code class="varname">Overlap</code>, meaning a
+<li><p><code class="varname">Overlap</code>, meaning a
     <code class="computeroutput">src</code> /
     <code class="computeroutput">dst</code> overlap in
     <code class="function">memcpy</code> or a similar function.</p></li>
-<li class="listitem"><p><code class="varname">Leak</code>, meaning
+<li><p><code class="varname">Leak</code>, meaning
     a memory leak.</p></li>
 </ul></div>
 <p><code class="computeroutput">Param</code> errors have an extra
@@ -813,12 +796,12 @@ overlapping arguments (eg.  <code class="function">memcpy</code>,
 <code class="function">strcpy</code>, etc).</p>
 <p>Lastly, there's the rest of the calling context.</p>
 </div>
-<div class="sect1" title="4.5. Details of Memcheck's checking machinery">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="mc-manual.machine"></a>4.5. Details of Memcheck's checking machinery</h2></div></div></div>
 <p>Read this section if you want to know, in detail, exactly
 what and how Memcheck is checking.</p>
-<div class="sect2" title="4.5.1. Valid-value (V) bits">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.value"></a>4.5.1. Valid-value (V) bits</h3></div></div></div>
 <p>It is simplest to think of Memcheck implementing a synthetic CPU
@@ -918,7 +901,7 @@ is necessary.  This allows GCC to copy
 warning will only be emitted if the uninitialised values are later
 used.</p>
 </div>
-<div class="sect2" title="4.5.2. Valid-address (A) bits">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.vaddress"></a>4.5.2. Valid-address (A) bits</h3></div></div></div>
 <p>Notice that the previous subsection describes how the validity of
@@ -937,15 +920,15 @@ the A bits associated with the address.  If any of them indicate an
 invalid address, an error is emitted.  Note that the reads and writes
 themselves do not change the A bits, only consult them.</p>
 <p>So how do the A bits get set/cleared?  Like this:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>When the program starts, all the global data areas are
+<div class="itemizedlist"><ul type="disc">
+<li><p>When the program starts, all the global data areas are
     marked as accessible.</p></li>
-<li class="listitem"><p>When the program does
+<li><p>When the program does
     <code class="function">malloc</code>/<code class="computeroutput">new</code>,
     the A bits for exactly the area allocated, and not a byte more,
     are marked as accessible.  Upon freeing the area the A bits are
     changed to indicate inaccessibility.</p></li>
-<li class="listitem"><p>When the stack pointer register (<code class="literal">SP</code>) moves
+<li><p>When the stack pointer register (<code class="literal">SP</code>) moves
     up or down, A bits are set.  The rule is that the area from
     <code class="literal">SP</code> up to the base of the stack is marked as
     accessible, and below <code class="literal">SP</code> is inaccessible.  (If
@@ -955,46 +938,46 @@ themselves do not change the A bits, only consult them.</p>
     section of stack used by a function for local variables etc is
     automatically marked accessible on function entry and inaccessible
     on exit.</p></li>
-<li class="listitem"><p>When doing system calls, A bits are changed appropriately.
+<li><p>When doing system calls, A bits are changed appropriately.
     For example, <code class="literal">mmap</code>
     magically makes files appear in the process'
     address space, so the A bits must be updated if <code class="literal">mmap</code>
     succeeds.</p></li>
-<li class="listitem"><p>Optionally, your program can tell Memcheck about such changes
+<li><p>Optionally, your program can tell Memcheck about such changes
     explicitly, using the client request mechanism described
     above.</p></li>
 </ul></div>
 </div>
-<div class="sect2" title="4.5.3. Putting it all together">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.together"></a>4.5.3. Putting it all together</h3></div></div></div>
 <p>Memcheck's checking machinery can be summarised as
 follows:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>Each byte in memory has 8 associated V (valid-value) bits,
+<div class="itemizedlist"><ul type="disc">
+<li><p>Each byte in memory has 8 associated V (valid-value) bits,
     saying whether or not the byte has a defined value, and a single A
     (valid-address) bit, saying whether or not the program currently has
     the right to read/write that address.  As mentioned above, heavy
     use of compression means the overhead is typically around 25%.</p></li>
-<li class="listitem"><p>When memory is read or written, the relevant A bits are
+<li><p>When memory is read or written, the relevant A bits are
     consulted.  If they indicate an invalid address, Memcheck emits an
     Invalid read or Invalid write error.</p></li>
-<li class="listitem"><p>When memory is read into the CPU's registers, the relevant V
+<li><p>When memory is read into the CPU's registers, the relevant V
     bits are fetched from memory and stored in the simulated CPU.  They
     are not consulted.</p></li>
-<li class="listitem"><p>When a register is written out to memory, the V bits for that
+<li><p>When a register is written out to memory, the V bits for that
     register are written back to memory too.</p></li>
-<li class="listitem"><p>When values in CPU registers are used to generate a memory
+<li><p>When values in CPU registers are used to generate a memory
     address, or to determine the outcome of a conditional branch, the V
     bits for those values are checked, and an error emitted if any of
     them are undefined.</p></li>
-<li class="listitem"><p>When values in CPU registers are used for any other purpose,
+<li><p>When values in CPU registers are used for any other purpose,
     Memcheck computes the V bits for the result, but does not check
     them.</p></li>
-<li class="listitem"><p>Once the V bits for a value in the CPU have been checked, they
+<li><p>Once the V bits for a value in the CPU have been checked, they
     are then set to indicate validity.  This avoids long chains of
     errors.</p></li>
-<li class="listitem">
+<li>
 <p>When values are loaded from memory, Memcheck checks the A bits
     for that location and issues an illegal-address warning if needed.
     In that case, the V bits loaded are forced to indicate Valid,
@@ -1020,21 +1003,21 @@ follows:</p>
 <code class="computeroutput">delete</code> and
 <code class="computeroutput">delete[]</code>.  The behaviour you get
 is:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p><code class="function">malloc</code>/<code class="function">new</code>/<code class="computeroutput">new[]</code>:
+<div class="itemizedlist"><ul type="disc">
+<li><p><code class="function">malloc</code>/<code class="function">new</code>/<code class="computeroutput">new[]</code>:
     the returned memory is marked as addressable but not having valid
     values.  This means you have to write to it before you can read
     it.</p></li>
-<li class="listitem"><p><code class="function">calloc</code>: returned memory is marked both
+<li><p><code class="function">calloc</code>: returned memory is marked both
     addressable and valid, since <code class="function">calloc</code> clears
     the area to zero.</p></li>
-<li class="listitem"><p><code class="function">realloc</code>: if the new size is larger than
+<li><p><code class="function">realloc</code>: if the new size is larger than
     the old, the new section is addressable but invalid, as with
     <code class="function">malloc</code>.  If the new size is smaller, the
     dropped-off section is marked as unaddressable.  You may only pass to
     <code class="function">realloc</code> a pointer previously issued to you by
     <code class="function">malloc</code>/<code class="function">calloc</code>/<code class="function">realloc</code>.</p></li>
-<li class="listitem"><p><code class="function">free</code>/<code class="computeroutput">delete</code>/<code class="computeroutput">delete[]</code>:
+<li><p><code class="function">free</code>/<code class="computeroutput">delete</code>/<code class="computeroutput">delete[]</code>:
     you may only pass to these functions a pointer previously issued
     to you by the corresponding allocation function.  Otherwise,
     Memcheck complains.  If the pointer is indeed valid, Memcheck
@@ -1046,14 +1029,14 @@ is:</p>
 </ul></div>
 </div>
 </div>
-<div class="sect1" title="4.6. Memcheck Monitor Commands">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="mc-manual.monitor-commands"></a>4.6. Memcheck Monitor Commands</h2></div></div></div>
 <p>The Memcheck tool provides monitor commands handled by Valgrind's
-built-in gdbserver (see <a class="xref" href="manual-core-adv.html#manual-core-adv.gdbserver-commandhandling" title="3.2.5. Monitor command handling by the Valgrind gdbserver">Monitor command handling by the Valgrind gdbserver</a>).
+built-in gdbserver (see <a class="xref" href="manual-core-adv.html#manual-core-adv.gdbserver-commandhandling" title="3.2.4. Monitor command handling by the Valgrind gdbserver">Monitor command handling by the Valgrind gdbserver</a>).
 </p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem">
+<div class="itemizedlist"><ul type="disc">
+<li>
 <p><code class="varname">get_vbits &lt;addr&gt; [&lt;len&gt;]</code>
     shows the definedness (V) bits for &lt;len&gt; (default 1) bytes
     starting at &lt;addr&gt;.  The definedness of each byte in the
@@ -1092,7 +1075,7 @@ $10 = 0x0
 (gdb) 
 </pre>
 </li>
-<li class="listitem">
+<li>
 <p><code class="varname">make_memory
     [noaccess|undefined|defined|Definedifaddressable] &lt;addr&gt;
     [&lt;len&gt;]</code> marks the range of &lt;len&gt; (default 1)
@@ -1119,7 +1102,7 @@ $10 = 0x0
 (gdb) 
 </pre>
 </li>
-<li class="listitem">
+<li>
 <p><code class="varname">check_memory [addressable|defined] &lt;addr&gt;
     [&lt;len&gt;]</code> checks that the range of &lt;len&gt;
     (default 1) bytes at &lt;addr&gt; has the specified accessibility.
@@ -1136,7 +1119,7 @@ Address 0x8049E28 len 1 defined
 (gdb) 
 </pre>
 </li>
-<li class="listitem">
+<li>
 <p><code class="varname">leak_check [full*|summary]
                               [reachable|possibleleak*|definiteleak]
                               [increased*|changed|any]
@@ -1224,24 +1207,24 @@ Address 0x8049E28 len 1 defined
 </li>
 </ul></div>
 </div>
-<div class="sect1" title="4.7. Client Requests">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="mc-manual.clientreqs"></a>4.7. Client Requests</h2></div></div></div>
 <p>The following client requests are defined in
 <code class="filename">memcheck.h</code>.
 See <code class="filename">memcheck.h</code> for exact details of their
 arguments.</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p><code class="varname">VALGRIND_MAKE_MEM_NOACCESS</code>,
+<div class="itemizedlist"><ul type="disc">
+<li><p><code class="varname">VALGRIND_MAKE_MEM_NOACCESS</code>,
     <code class="varname">VALGRIND_MAKE_MEM_UNDEFINED</code> and
     <code class="varname">VALGRIND_MAKE_MEM_DEFINED</code>.
     These mark address ranges as completely inaccessible,
     accessible but containing undefined data, and accessible and
     containing defined data, respectively.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE</code>.
+<li><p><code class="varname">VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE</code>.
     This is just like <code class="varname">VALGRIND_MAKE_MEM_DEFINED</code> but only
     affects those bytes that are already addressable.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_CHECK_MEM_IS_ADDRESSABLE</code> and
+<li><p><code class="varname">VALGRIND_CHECK_MEM_IS_ADDRESSABLE</code> and
     <code class="varname">VALGRIND_CHECK_MEM_IS_DEFINED</code>: check immediately
     whether or not the given address range has the relevant property,
     and if not, print an error message.  Also, for the convenience of
@@ -1249,45 +1232,45 @@ arguments.</p>
     the returned value is the address of the first byte for which the
     property is not true.  Always returns 0 when not run on
     Valgrind.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_CHECK_VALUE_IS_DEFINED</code>: a quick and easy
+<li><p><code class="varname">VALGRIND_CHECK_VALUE_IS_DEFINED</code>: a quick and easy
     way to find out whether Valgrind thinks a particular value
     (lvalue, to be precise) is addressable and defined.  Prints an error
     message if not.  It has no return value.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_DO_LEAK_CHECK</code>: does a full memory leak
+<li><p><code class="varname">VALGRIND_DO_LEAK_CHECK</code>: does a full memory leak
     check (like <code class="option">--leak-check=full</code>) right now.
     This is useful for incrementally checking for leaks between arbitrary
     places in the program's execution.  It has no return value.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_DO_ADDED_LEAK_CHECK</code>: same as
+<li><p><code class="varname">VALGRIND_DO_ADDED_LEAK_CHECK</code>: same as
    <code class="varname"> VALGRIND_DO_LEAK_CHECK</code> but only shows the
     entries for which there was an increase in leaked bytes or leaked
     number of blocks since the previous leak search.  It has no return
     value.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_DO_CHANGED_LEAK_CHECK</code>: same as
+<li><p><code class="varname">VALGRIND_DO_CHANGED_LEAK_CHECK</code>: same as
     <code class="varname">VALGRIND_DO_LEAK_CHECK</code> but only shows the
     entries for which there was an increase or decrease in leaked
     bytes or leaked number of blocks since the previous leak search. It
     has no return value.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_DO_QUICK_LEAK_CHECK</code>: like
+<li><p><code class="varname">VALGRIND_DO_QUICK_LEAK_CHECK</code>: like
     <code class="varname">VALGRIND_DO_LEAK_CHECK</code>, except it produces only a leak
     summary (like <code class="option">--leak-check=summary</code>).
     It has no return value.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_COUNT_LEAKS</code>: fills in the four
+<li><p><code class="varname">VALGRIND_COUNT_LEAKS</code>: fills in the four
     arguments with the number of bytes of memory found by the previous
     leak check to be leaked (i.e. the sum of direct leaks and indirect leaks),
     dubious, reachable and suppressed.  This is useful in test harness code,
     after calling <code class="varname">VALGRIND_DO_LEAK_CHECK</code> or
     <code class="varname">VALGRIND_DO_QUICK_LEAK_CHECK</code>.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_COUNT_LEAK_BLOCKS</code>: identical to
+<li><p><code class="varname">VALGRIND_COUNT_LEAK_BLOCKS</code>: identical to
     <code class="varname">VALGRIND_COUNT_LEAKS</code> except that it returns the
     number of blocks rather than the number of bytes in each
     category.</p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_GET_VBITS</code> and
+<li><p><code class="varname">VALGRIND_GET_VBITS</code> and
     <code class="varname">VALGRIND_SET_VBITS</code>: allow you to get and set the
     V (validity) bits for an address range.  You should probably only
     set V bits that you have got with
     <code class="varname">VALGRIND_GET_VBITS</code>.  Only for those who really
     know what they are doing.</p></li>
-<li class="listitem">
+<li>
 <p><code class="varname">VALGRIND_CREATE_BLOCK</code> and 
     <code class="varname">VALGRIND_DISCARD</code>.  <code class="varname">VALGRIND_CREATE_BLOCK</code>
     takes an address, a number of bytes and a character string.  The
@@ -1311,7 +1294,7 @@ arguments.</p>
 </li>
 </ul></div>
 </div>
-<div class="sect1" title="4.8. Memory Pools: describing and working with custom allocators">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="mc-manual.mempools"></a>4.8. Memory Pools: describing and working with custom allocators</h2></div></div></div>
 <p>Some programs use custom memory allocators, often for performance
@@ -1325,15 +1308,15 @@ happening.</p>
 attempts to reason about them using a loose, abstract model.  We
 use the following terminology when describing custom allocation
 systems:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>Custom allocation involves a set of independent "memory pools".
+<div class="itemizedlist"><ul type="disc">
+<li><p>Custom allocation involves a set of independent "memory pools".
     </p></li>
-<li class="listitem"><p>Memcheck's notion of a a memory pool consists of a single "anchor
+<li><p>Memcheck's notion of a a memory pool consists of a single "anchor
     address" and a set of non-overlapping "chunks" associated with the
     anchor address.</p></li>
-<li class="listitem"><p>Typically a pool's anchor address is the address of a 
+<li><p>Typically a pool's anchor address is the address of a 
     book-keeping "header" structure.</p></li>
-<li class="listitem"><p>Typically the pool's chunks are drawn from a contiguous
+<li><p>Typically the pool's chunks are drawn from a contiguous
     "superblock" acquired through the system
     <code class="function">malloc</code> or
     <code class="function">mmap</code>.</p></li>
@@ -1383,8 +1366,8 @@ the allocated chunks within the pool.</p>
 Once the header and superblock for a pool are established and properly
 marked, there are a number of client requests programs can use to
 inform Memcheck about changes to the state of a mempool:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem">
+<div class="itemizedlist"><ul type="disc">
+<li>
 <p>
     <code class="varname">VALGRIND_CREATE_MEMPOOL(pool, rzB, is_zeroed)</code>:
     This request registers the address <code class="varname">pool</code> as the anchor
@@ -1400,14 +1383,14 @@ inform Memcheck about changes to the state of a mempool:</p>
     subsequent calls can refer to it as a pool.
     </p>
 </li>
-<li class="listitem"><p><code class="varname">VALGRIND_DESTROY_MEMPOOL(pool)</code>:
+<li><p><code class="varname">VALGRIND_DESTROY_MEMPOOL(pool)</code>:
     This request tells Memcheck that a pool is being torn down. Memcheck
     then removes all records of chunks associated with the pool, as well
     as its record of the pool's existence. While destroying its records of
     a mempool, Memcheck resets the redzones of any live chunks in the pool
     to NOACCESS.
     </p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_MEMPOOL_ALLOC(pool, addr, size)</code>:
+<li><p><code class="varname">VALGRIND_MEMPOOL_ALLOC(pool, addr, size)</code>:
     This request informs Memcheck that a <code class="varname">size</code>-byte chunk
     has been allocated at <code class="varname">addr</code>, and associates the chunk with the
     specified
@@ -1418,24 +1401,24 @@ inform Memcheck about changes to the state of a mempool:</p>
     Memcheck will mark the chunk as DEFINED, otherwise Memcheck will mark
     the chunk as UNDEFINED.
     </p></li>
-<li class="listitem"><p><code class="varname">VALGRIND_MEMPOOL_FREE(pool, addr)</code>:
+<li><p><code class="varname">VALGRIND_MEMPOOL_FREE(pool, addr)</code>:
     This request informs Memcheck that the chunk at <code class="varname">addr</code>
     should no longer be considered allocated. Memcheck will mark the chunk
     associated with <code class="varname">addr</code> as NOACCESS, and delete its
     record of the chunk's existence.
     </p></li>
-<li class="listitem">
+<li>
 <p><code class="varname">VALGRIND_MEMPOOL_TRIM(pool, addr, size)</code>:
     This request trims the chunks associated with <code class="varname">pool</code>.
     The request only operates on chunks associated with
     <code class="varname">pool</code>. Trimming is formally defined as:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p> All chunks entirely inside the range
+<div class="itemizedlist"><ul type="circle">
+<li><p> All chunks entirely inside the range
         <code class="varname">addr..(addr+size-1)</code> are preserved.</p></li>
-<li class="listitem"><p>All chunks entirely outside the range
+<li><p>All chunks entirely outside the range
         <code class="varname">addr..(addr+size-1)</code> are discarded, as though
         <code class="varname">VALGRIND_MEMPOOL_FREE</code> was called on them. </p></li>
-<li class="listitem"><p>All other chunks must intersect with the range 
+<li><p>All other chunks must intersect with the range 
         <code class="varname">addr..(addr+size-1)</code>; areas outside the
         intersection are marked as NOACCESS, as though they had been
         independently freed with
@@ -1445,7 +1428,7 @@ inform Memcheck about changes to the state of a mempool:</p>
     implementing the type of mass-free operations common in custom 
     LIFO allocators.</p>
 </li>
-<li class="listitem">
+<li>
 <p><code class="varname">VALGRIND_MOVE_MEMPOOL(poolA, poolB)</code>: This
     request informs Memcheck that the pool previously anchored at
     address <code class="varname">poolA</code> has moved to anchor address
@@ -1453,7 +1436,7 @@ inform Memcheck about changes to the state of a mempool:</p>
     if you <code class="function">realloc</code> the header of a mempool.</p>
 <p>No memory-status bits are altered by this request.</p>
 </li>
-<li class="listitem">
+<li>
 <p>
     <code class="varname">VALGRIND_MEMPOOL_CHANGE(pool, addrA, addrB,
     size)</code>: This request informs Memcheck that the chunk
@@ -1467,7 +1450,7 @@ inform Memcheck about changes to the state of a mempool:</p>
 <p>No memory-status bits are altered by this request.
     </p>
 </li>
-<li class="listitem"><p><code class="varname">VALGRIND_MEMPOOL_EXISTS(pool)</code>:
+<li><p><code class="varname">VALGRIND_MEMPOOL_EXISTS(pool)</code>:
     This request informs the caller whether or not Memcheck is currently 
     tracking a mempool at anchor address <code class="varname">pool</code>. It
     evaluates to 1 when there is a mempool associated with that address, 0
@@ -1476,7 +1459,7 @@ inform Memcheck about changes to the state of a mempool:</p>
     </p></li>
 </ul></div>
 </div>
-<div class="sect1" title="4.9. Debugging MPI Parallel Programs with Valgrind">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="mc-manual.mpiwrap"></a>4.9. Debugging MPI Parallel Programs with Valgrind</h2></div></div></div>
 <p>Memcheck supports debugging of distributed-memory applications
@@ -1500,7 +1483,7 @@ buffer which is too small.</p>
 BSD-style license, so you can link it into any code base you like.
 See the top of <code class="computeroutput">mpi/libmpiwrap.c</code>
 for license details.</p>
-<div class="sect2" title="4.9.1. Building and installing the wrappers">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.mpiwrap.build"></a>4.9.1. Building and installing the wrappers</h3></div></div></div>
 <p> The wrapper library will be built automatically if possible.
@@ -1545,7 +1528,7 @@ shared object with soname matching
 correct at least for Open MPI and Quadrics MPI, and can easily be
 changed if required.</p>
 </div>
-<div class="sect2" title="4.9.2. Getting started">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.mpiwrap.gettingstarted"></a>4.9.2. Getting started</h3></div></div></div>
 <p>Compile your MPI application as usual, taking care to link it
@@ -1567,7 +1550,7 @@ MPIWRAP_DEBUG=[wrapper-args]                                  \
 simply link it to your application if desired.  This should not disturb
 native behaviour of your application in any way.</p>
 </div>
-<div class="sect2" title="4.9.3. Controlling the wrapper library">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.mpiwrap.controlling"></a>4.9.3. Controlling the wrapper library</h3></div></div></div>
 <p>Environment variable
@@ -1580,23 +1563,23 @@ valgrind MPI wrappers 16386: Try MPIWRAP_DEBUG=help for possible options
 <p> and then be relatively quiet.</p>
 <p>You can give a list of comma-separated options in
 <code class="computeroutput">MPIWRAP_DEBUG</code>.  These are</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p><code class="computeroutput">verbose</code>:
+<div class="itemizedlist"><ul type="disc">
+<li><p><code class="computeroutput">verbose</code>:
     show entries/exits of all wrappers.  Also show extra
     debugging info, such as the status of outstanding 
     <code class="computeroutput">MPI_Request</code>s resulting
     from uncompleted <code class="computeroutput">MPI_Irecv</code>s.</p></li>
-<li class="listitem"><p><code class="computeroutput">quiet</code>: 
+<li><p><code class="computeroutput">quiet</code>: 
     opposite of <code class="computeroutput">verbose</code>, only print 
     anything when the wrappers want
     to report a detected programming error, or in case of catastrophic
     failure of the wrappers.</p></li>
-<li class="listitem"><p><code class="computeroutput">warn</code>: 
+<li><p><code class="computeroutput">warn</code>: 
     by default, functions which lack proper wrappers
     are not commented on, just silently
     ignored.  This causes a warning to be printed for each unwrapped
     function used, up to a maximum of three warnings per function.</p></li>
-<li class="listitem"><p><code class="computeroutput">strict</code>: 
+<li><p><code class="computeroutput">strict</code>: 
     print an error message and abort the program if 
     a function lacking a wrapper is used.</p></li>
 </ul></div>
@@ -1606,7 +1589,7 @@ valgrind MPI wrappers 16386: Try MPIWRAP_DEBUG=help for possible options
 <code class="computeroutput">MPIWRAP_DEBUG</code> so as to get rid of any
 extraneous printing from the wrappers.</p>
 </div>
-<div class="sect2" title="4.9.4. Functions">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.mpiwrap.limitations.functions"></a>4.9.4. Functions</h3></div></div></div>
 <p>All MPI2 functions except
@@ -1666,7 +1649,7 @@ complex types.  The most common functions called are
 <code class="computeroutput">PMPI_Type_get_contents</code>, and
 <code class="computeroutput">PMPI_Type_free</code>.  </p>
 </div>
-<div class="sect2" title="4.9.5. Types">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.mpiwrap.limitations.types"></a>4.9.5. Types</h3></div></div></div>
 <p> MPI-1.1 structured types are supported, and walked exactly.
@@ -1715,7 +1698,7 @@ double) == 8</code>).  For arrays of all other types, the
 wrappers handle each element individually and so there can be a very
 large performance cost.</p>
 </div>
-<div class="sect2" title="4.9.6. Writing new wrappers">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.mpiwrap.writingwrappers"></a>4.9.6. Writing new wrappers</h3></div></div></div>
 <p>
@@ -1749,7 +1732,7 @@ aid navigation.  When adding a wrapper, remember to comment out the
 definition of the default wrapper in the long list of defaults at the
 bottom of the file (do not remove it, just comment it out).</p>
 </div>
-<div class="sect2" title="4.9.7. What to expect when using the wrappers">
+<div class="sect2" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="mc-manual.mpiwrap.whattoexpect"></a>4.9.7. What to expect when using the wrappers</h3></div></div></div>
 <p>The wrappers should reduce Memcheck's false-error rate on MPI

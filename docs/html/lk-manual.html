@@ -3,8 +3,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>13. Lackey: an example tool</title>
 <link rel="stylesheet" href="vg_basic.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
-<link rel="home" href="index.html" title="Valgrind Documentation">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="index.html" title="Valgrind Documentation">
 <link rel="up" href="manual.html" title="Valgrind User Manual">
 <link rel="prev" href="bbv-manual.html" title="12. BBV: an experimental basic block vector generation tool">
 <link rel="next" href="nl-manual.html" title="14. Nulgrind: the minimal Valgrind tool">
@@ -17,7 +17,7 @@
 <th align="center" valign="middle">Valgrind User Manual</th>
 <td width="22px" align="center" valign="middle"><a accesskey="n" href="nl-manual.html"><img src="images/next.png" width="18" height="21" border="0" alt="Next"></a></td>
 </tr></table></div>
-<div class="chapter" title="13. Lackey: an example tool">
+<div class="chapter" lang="en">
 <div class="titlepage"><div><div><h2 class="title">
 <a name="lk-manual"></a>13. Lackey: an example tool</h2></div></div></div>
 <div class="toc">
@@ -30,7 +30,7 @@
 <p>To use this tool, you must specify
 <code class="option">--tool=lackey</code> on the Valgrind
 command line.</p>
-<div class="sect1" title="13.1. Overview">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="lk-manual.overview"></a>13.1. Overview</h2></div></div></div>
 <p>Lackey is a simple Valgrind tool that does various kinds of basic
@@ -39,7 +39,7 @@ program's code.  It is primarily intended to be of use as an example tool,
 and consequently emphasises clarity of implementation over
 performance.</p>
 </div>
-<div class="sect1" title="13.2. Lackey Command-line Options">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="lk-manual.options"></a>13.2. Lackey Command-line Options</h2></div></div></div>
 <p>Lackey-specific command-line options are:</p>
@@ -53,23 +53,23 @@ performance.</p>
 <dd>
 <p>When enabled, Lackey prints the following statistics and
       information about the execution of the client program:</p>
-<div class="orderedlist"><ol class="orderedlist" type="1">
-<li class="listitem"><p>The number of calls to the function specified by the
+<div class="orderedlist"><ol type="1">
+<li><p>The number of calls to the function specified by the
         <code class="option">--fnname</code> option (the default is
         <code class="computeroutput">main</code>).
         If the program has had its symbols stripped, the count will always
         be zero.</p></li>
-<li class="listitem"><p>The number of conditional branches encountered and the
+<li><p>The number of conditional branches encountered and the
         number and proportion of those taken.</p></li>
-<li class="listitem"><p>The number of superblocks entered and completed by the
+<li><p>The number of superblocks entered and completed by the
         program.  Note that due to optimisations done by the JIT, this
         is not at all an accurate value.</p></li>
-<li class="listitem"><p>The number of guest (x86, amd64, ppc, etc.) instructions and IR
+<li><p>The number of guest (x86, amd64, ppc, etc.) instructions and IR
         statements executed.  IR is Valgrind's RISC-like intermediate
         representation via which all instrumentation is done.
         </p></li>
-<li class="listitem"><p>Ratios between some of these counts.</p></li>
-<li class="listitem"><p>The exit code of the client program.</p></li>
+<li><p>Ratios between some of these counts.</p></li>
+<li><p>The exit code of the client program.</p></li>
 </ol></div>
 </dd>
 <dt>

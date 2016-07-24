@@ -1,7 +1,7 @@
 
 
 Valgrind FAQ
-Release 3.7.0 2 November 2011
+Release 3.6.0 21 October 2010
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Table of Contents
@@ -16,15 +16,18 @@ Table of Contents
 1. Background
 ------------------------------------------------------------------------
 
-1.1. How do you pronounce "Valgrind"? 
+1.1. How do you pronounce "Valgrind"?
+
 The "Val" as in the world "value". The "grind" is pronounced with a 
 short 'i' -- ie. "grinned" (rhymes with "tinned") rather than "grined" 
 (rhymes with "find"). 
 
-Don't feel bad: almost everyone gets it wrong at first. 
+Don't feel bad: almost everyone gets it wrong at first.
+
 ------------------------------------------------------------------------
 
-1.2. Where does the name "Valgrind" come from? 
+1.2. Where does the name "Valgrind" come from?
+
 From Nordic mythology. Originally (before release) the project was named 
 Heimdall, after the watchman of the Nordic gods. He could "see a hundred 
 miles by day or night, hear the grass growing, see the wool growing on a 
@@ -39,7 +42,8 @@ the far regions of the nine worlds. Only those judged worthy by the
 guardians are allowed to pass through Valgrind. All others are refused 
 entrance. 
 
-It's not short for "value grinder", although that's not a bad guess. 
+It's not short for "value grinder", although that's not a bad guess.
+
 
 ------------------------------------------------------------------------
 2. Compiling, installing and configuring
@@ -59,11 +63,13 @@ heard that unsetting the CFLAGS environment variable avoids the problem.
 
 ------------------------------------------------------------------------
 
-2.2. When building Valgrind, 'make' fails with this: 
+2.2. When building Valgrind, 'make' fails with this:
+
     /usr/bin/ld: cannot find -lc
     collect2: ld returned 1 exit status
     
-You need to install the glibc-static-devel package. 
+You need to install the glibc-static-devel package.
+
 
 ------------------------------------------------------------------------
 3. Valgrind aborts unexpectedly
@@ -87,13 +93,16 @@ they are not real leaks), but at least the program runs.
 
 ------------------------------------------------------------------------
 
-3.2. My (buggy) program dies like this: 
+3.2. My (buggy) program dies like this:
+
     valgrind: m_mallocfree.c:248 (get_bszB_as_is): Assertion 'bszB_lo == bszB_hi' failed.
 
-or like this: 
+or like this:
+
     valgrind: m_mallocfree.c:442 (mk_inuse_bszB): Assertion 'bszB != 0' failed.
 
-or otherwise aborts or crashes in m_mallocfree.c. 
+or otherwise aborts or crashes in m_mallocfree.c.
+
 If Memcheck (the memory checker) shows any invalid reads, invalid writes 
 or invalid frees in your program, the above may happen. Reason is that 
 your program may trash Valgrind's low-level memory manager, which then 
@@ -103,7 +112,8 @@ above failure will hopefully go away after that.
 
 ------------------------------------------------------------------------
 
-3.3. My program dies, printing a message like this along the way: 
+3.3. My program dies, printing a message like this along the way:
+
     vex x86->IR: unhandled instruction bytes: 0x66 0xF 0x2E 0x5
 
 One possibility is that your program has a bug and erroneously jumps to 
@@ -196,7 +206,8 @@ on your platform, but not on others.
 4.2. The stack traces given by Memcheck (or another tool) aren't 
 helpful. How can I improve them? 
 
-If they're not long enough, use --num-callers to make them longer. 
+If they're not long enough, use --num-callers to make them longer.
+
 If they're not detailed enough, make sure you are compiling with -g to 
 add debug information. And don't strip symbol tables (programs should be 
 unstripped unless you run 'strip' on them; some libraries ship 
@@ -210,31 +221,37 @@ workaround here is to avoid calling dlclose on these shared objects.
 Also, -fomit-frame-pointer and -fstack-check can make stack traces 
 worse. 
 
-Some example sub-traces: 
-* With debug information and unstripped (best): 
+Some example sub-traces:
+
+* With debug information and unstripped (best):
+
     Invalid write of size 1
        at 0x80483BF: really (malloc1.c:20)
        by 0x8048370: main (malloc1.c:9)
     
-* With no debug information, unstripped: 
+* With no debug information, unstripped:
+
     Invalid write of size 1
        at 0x80483BF: really (in /auto/homes/njn25/grind/head5/a.out)
        by 0x8048370: main (in /auto/homes/njn25/grind/head5/a.out)
     
-* With no debug information, stripped: 
+* With no debug information, stripped:
+
     Invalid write of size 1
        at 0x80483BF: (within /auto/homes/njn25/grind/head5/a.out)
        by 0x8048370: (within /auto/homes/njn25/grind/head5/a.out)
        by 0x42015703: __libc_start_main (in /lib/tls/libc-2.3.2.so)
        by 0x80482CC: (within /auto/homes/njn25/grind/head5/a.out)
     
-* With debug information and -fomit-frame-pointer: 
+* With debug information and -fomit-frame-pointer:
+
     Invalid write of size 1
        at 0x80483C4: really (malloc1.c:20)
        by 0x42015703: __libc_start_main (in /lib/tls/libc-2.3.2.so)
        by 0x80482CC: ??? (start.S:81)
     
-* A leak error message involving an unloaded shared object: 
+* A leak error message involving an unloaded shared object:
+
     84 bytes in 1 blocks are possibly lost in loss record 488 of 713
        at 0x1B9036DA: operator new(unsigned) (vg_replace_malloc.c:132)
        by 0x1DB63EEB: ???
@@ -281,14 +298,16 @@ cases Memcheck should identify the bad memory operation.
 4.5. Memcheck doesn't report any errors and I know my program has 
 errors. 
 
-There are two possible causes of this. 
+There are two possible causes of this.
+
 First, by default, Valgrind only traces the top-level process. So if 
 your program spawns children, they won't be traced by Valgrind by 
 default. Also, if your program is started by a shell script, Perl 
 script, or something similar, Valgrind will trace the shell, or the Perl 
 interpreter, or equivalent. 
 
-To trace child processes, use the --trace-children=yes option. 
+To trace child processes, use the --trace-children=yes option.
+
 If you are tracing large trees of processes, it can be less disruptive 
 to have the output sent over the network. Give Valgrind the option 
 --log-socket=127.0.0.1:12345 (if you want logging output sent to port 
@@ -309,7 +328,8 @@ statically linking your program.
 
 ------------------------------------------------------------------------
 
-4.6. Why doesn't Memcheck find the array overruns in this program? 
+4.6. Why doesn't Memcheck find the array overruns in this program?
+
     int static[5];
     
     int main(void)
@@ -352,8 +372,10 @@ carefully. Note particularly that C++ function names must be mangled
 "definitely lost", "indirectly lost", "possibly lost", "still 
 reachable", and "suppressed"? 
 
-The details are in the Memcheck section of the user manual. 
-In short: 
+The details are in the Memcheck section of the user manual.
+
+In short:
+
 * "definitely lost" means your program is leaking memory -- fix those 
 leaks! 
 

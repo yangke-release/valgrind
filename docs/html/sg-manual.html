@@ -3,8 +3,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>11. SGCheck: an experimental stack and global array overrun detector</title>
 <link rel="stylesheet" href="vg_basic.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
-<link rel="home" href="index.html" title="Valgrind Documentation">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="index.html" title="Valgrind Documentation">
 <link rel="up" href="manual.html" title="Valgrind User Manual">
 <link rel="prev" href="dh-manual.html" title="10. DHAT: a dynamic heap analysis tool">
 <link rel="next" href="bbv-manual.html" title="12. BBV: an experimental basic block vector generation tool">
@@ -17,7 +17,7 @@
 <th align="center" valign="middle">Valgrind User Manual</th>
 <td width="22px" align="center" valign="middle"><a accesskey="n" href="bbv-manual.html"><img src="images/next.png" width="18" height="21" border="0" alt="Next"></a></td>
 </tr></table></div>
-<div class="chapter" title="11. SGCheck: an experimental stack and global array overrun detector">
+<div class="chapter" lang="en">
 <div class="titlepage"><div><div><h2 class="title">
 <a name="sg-manual"></a>11. SGCheck: an experimental stack and global array overrun detector</h2></div></div></div>
 <div class="toc">
@@ -35,7 +35,7 @@
 <p>To use this tool, you must specify
 <code class="option">--tool=exp-sgcheck</code> on the Valgrind
 command line.</p>
-<div class="sect1" title="11.1. Overview">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="sg-manual.overview"></a>11.1. Overview</h2></div></div></div>
 <p>SGCheck is a tool for finding overruns of stack and global
@@ -43,12 +43,12 @@ arrays.  It works by using a heuristic approach derived from an
 observation about the likely forms of stack and global array accesses.
 </p>
 </div>
-<div class="sect1" title="11.2. SGCheck Command-line Options">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="sg-manual.options"></a>11.2. SGCheck Command-line Options</h2></div></div></div>
 <p>There are no SGCheck-specific command-line options at present.</p>
 </div>
-<div class="sect1" title="11.3. How SGCheck Works">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="sg-manual.how-works.sg-checks"></a>11.3. How SGCheck Works</h2></div></div></div>
 <p>When a source file is compiled
@@ -97,7 +97,7 @@ does not carry any restriction from one call to the next.  Indeed,
 multiple threads may make multiple simultaneous calls to
 (e.g.) <code class="function">memcpy</code> without mutual interference.</p>
 </div>
-<div class="sect1" title="11.4. Comparison with Memcheck">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="sg-manual.cmp-w-memcheck"></a>11.4. Comparison with Memcheck</h2></div></div></div>
 <p>SGCheck and Memcheck are complementary: their capabilities do
@@ -108,15 +108,15 @@ checking for stack or global arrays.</p>
 <p>SGCheck, on the other hand, does do bounds checking for stack or
 global arrays, but it doesn't do anything else.</p>
 </div>
-<div class="sect1" title="11.5. Limitations">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="sg-manual.limitations"></a>11.5. Limitations</h2></div></div></div>
 <p>This is an experimental tool, which relies rather too heavily on some
 not-as-robust-as-I-would-like assumptions on the behaviour of correct
 programs.  There are a number of limitations which you should be aware
 of.</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>False negatives (missed errors): it follows from the
+<div class="itemizedlist"><ul type="disc">
+<li><p>False negatives (missed errors): it follows from the
    description above (<a class="xref" href="sg-manual.html#sg-manual.how-works.sg-checks" title="11.3. How SGCheck Works">How SGCheck Works</a>)
    that the first access by a memory referencing instruction to a
    stack or global array creates an association between that
@@ -126,7 +126,7 @@ of.</p>
    function instantiation) is not checked for overrun, since SGCheck
    uses that as the "example" of how subsequent accesses should
    behave.</p></li>
-<li class="listitem">
+<li>
 <p>False positives (false errors): similarly, and more serious,
    it is clearly possible to write legitimate pieces of code which
    break the basic assumption upon which the checking algorithm
@@ -152,7 +152,7 @@ of.</p>
    and exit of Firefox.  The best that can be done is to suppress the
    errors.</p>
 </li>
-<li class="listitem"><p>Performance: SGCheck has to read all of
+<li><p>Performance: SGCheck has to read all of
    the DWARF3 type and variable information on the executable and its
    shared objects.  This is computationally expensive and makes
    startup quite slow.  You can expect debuginfo reading time to be in
@@ -161,7 +161,7 @@ of.</p>
    lot of memory.  To make it viable, SGCheck goes to considerable
    trouble to compress the in-memory representation of the DWARF3
    data, which is why the process of reading it appears slow.</p></li>
-<li class="listitem"><p>Performance: SGCheck runs slower than Memcheck.  This is
+<li><p>Performance: SGCheck runs slower than Memcheck.  This is
    partly due to a lack of tuning, but partly due to algorithmic
    difficulties.  The
    stack and global checks can sometimes require a number of range
@@ -169,7 +169,7 @@ of.</p>
    despite considerable efforts having been made.  A
    redesign and reimplementation could potentially make it much faster.
    </p></li>
-<li class="listitem">
+<li>
 <p>Coverage: Stack and global checking is fragile.  If a shared
    object does not have debug information attached, then SGCheck will
    not be able to determine the bounds of any stack or global arrays
@@ -182,53 +182,53 @@ of.</p>
    silently skip stack and global checking for such objects.  It would
    be better to print a warning in such circumstances.</p>
 </li>
-<li class="listitem"><p>Coverage: SGCheck does not check whether the the areas read
+<li><p>Coverage: SGCheck does not check whether the the areas read
    or written by system calls do overrun stack or global arrays.  This
    would be easy to add.</p></li>
-<li class="listitem"><p>Platforms: the stack/global checks won't work properly on
+<li><p>Platforms: the stack/global checks won't work properly on
    PowerPC, ARM or S390X platforms, only on X86 and AMD64 targets.
    That's because the stack and global checking requires tracking
    function calls and exits reliably, and there's no obvious way to do
    it on ABIs that use a link register for function returns.
    </p></li>
-<li class="listitem"><p>Robustness: related to the previous point.  Function
+<li><p>Robustness: related to the previous point.  Function
    call/exit tracking for X86 and AMD64 is believed to work properly
    even in the presence of longjmps within the same stack (although
    this has not been tested).  However, code which switches stacks is
    likely to cause breakage/chaos.</p></li>
 </ul></div>
 </div>
-<div class="sect1" title="11.6. Still To Do: User-visible Functionality">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="sg-manual.todo-user-visible"></a>11.6. Still To Do: User-visible Functionality</h2></div></div></div>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>Extend system call checking to work on stack and global arrays.</p></li>
-<li class="listitem"><p>Print a warning if a shared object does not have debug info
+<div class="itemizedlist"><ul type="disc">
+<li><p>Extend system call checking to work on stack and global arrays.</p></li>
+<li><p>Print a warning if a shared object does not have debug info
    attached, or if, for whatever reason, debug info could not be
    found, or read.</p></li>
-<li class="listitem"><p>Add some heuristic filtering that removes obvious false
+<li><p>Add some heuristic filtering that removes obvious false
      positives.  This would be easy to do.  For example, an access
      transition from a heap to a stack object almost certainly isn't a
      bug and so should not be reported to the user.</p></li>
 </ul></div>
 </div>
-<div class="sect1" title="11.7. Still To Do: Implementation Tidying">
+<div class="sect1" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="sg-manual.todo-implementation"></a>11.7. Still To Do: Implementation Tidying</h2></div></div></div>
 <p>Items marked CRITICAL are considered important for correctness:
 non-fixage of them is liable to lead to crashes or assertion failures
 in real use.</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p> sg_main.c: Redesign and reimplement the basic checking
+<div class="itemizedlist"><ul type="disc">
+<li><p> sg_main.c: Redesign and reimplement the basic checking
    algorithm.  It could be done much faster than it is -- the current
    implementation isn't very good.
    </p></li>
-<li class="listitem"><p> sg_main.c: Improve the performance of the stack / global
+<li><p> sg_main.c: Improve the performance of the stack / global
    checks by doing some up-front filtering to ignore references in
    areas which "obviously" can't be stack or globals.  This will
    require using information that m_aspacemgr knows about the address
    space layout.</p></li>
-<li class="listitem"><p>sg_main.c: fix compute_II_hash to make it a bit more sensible
+<li><p>sg_main.c: fix compute_II_hash to make it a bit more sensible
    for ppc32/64 targets (except that sg_ doesn't work on ppc32/64
    targets, so this is a bit academic at the moment).</p></li>
 </ul></div>

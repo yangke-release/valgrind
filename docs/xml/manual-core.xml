@@ -899,8 +899,8 @@ that can report errors, e.g. Memcheck, but not Cachegrind.</para>
 
       <para>This option is aimed at making life easier for tools that consume
       Valgrind's output as input, such as GUI front ends.  Currently this
-      option works with Memcheck, Helgrind, DRD and SGcheck.  The output
-      format is specified in the file
+      option works with Memcheck, Helgrind and SGcheck.  The output format
+      is specified in the file
       <computeroutput>docs/internals/xml-output-protocol4.txt</computeroutput>
       in the source tree for Valgrind 3.5.0 or later.</para>
 
@@ -2021,8 +2021,8 @@ subject to the following constraints:</para>
   <listitem>
    <para>On ARM, essentially the entire ARMv7-A instruction set
     is supported, in both ARM and Thumb mode.  ThumbEE and Jazelle are
-    not supported.  NEON, VFPv3 and ARMv6 media support is fairly
-    complete.
+    not supported.  NEON and VFPv3 support is fairly complete.  ARMv6
+    media instruction support is mostly done but not yet complete.
    </para>
   </listitem>
 

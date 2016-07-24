@@ -3,8 +3,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>Valgrind Frequently Asked Questions</title>
 <link rel="stylesheet" href="vg_basic.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
-<link rel="home" href="index.html" title="Valgrind Documentation">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="index.html" title="Valgrind Documentation">
 <link rel="up" href="FAQ.html" title="Valgrind FAQ">
 <link rel="prev" href="FAQ.html" title="Valgrind FAQ">
 <link rel="next" href="tech-docs.html" title="Valgrind Technical Documentation">
@@ -17,7 +17,7 @@
 <th align="center" valign="middle">Valgrind FAQ</th>
 <td width="22px" align="center" valign="middle"><a accesskey="n" href="tech-docs.html"><img src="images/next.png" width="18" height="21" border="0" alt="Next"></a></td>
 </tr></table></div>
-<div class="article" title="Valgrind Frequently Asked Questions">
+<div class="article" lang="en">
 <div class="titlepage">
 <div><div><h2 class="title">
 <a name="faq"></a>Valgrind Frequently Asked Questions</h2></div></div>
@@ -187,7 +187,7 @@
 <tr><td colspan="2"> </td></tr>
 <tr class="question">
 <td align="left" valign="top">
-<a name="faq.glibc_devel"></a><a name="id370621"></a><b>2.2.</b>
+<a name="faq.glibc_devel"></a><a name="id2551299"></a><b>2.2.</b>
 </td>
 <td align="left" valign="top">
 <b>When building Valgrind, 'make' fails with this:</b><pre class="screen">
@@ -363,14 +363,14 @@ collect2: ld returned 1 exit status
     memory as soon as possible by globally disabling memory caching.
     Beware!  Doing so will probably slow down your program, sometimes
     drastically.</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>With GCC 2.91, 2.95, 3.0 and 3.1, compile all source using
+<div class="itemizedlist"><ul type="disc">
+<li><p>With GCC 2.91, 2.95, 3.0 and 3.1, compile all source using
         the STL with <code class="literal">-D__USE_MALLOC</code>. Beware!  This was
         removed from GCC starting with version 3.3.</p></li>
-<li class="listitem"><p>With GCC 3.2.2 and later, you should export the
+<li><p>With GCC 3.2.2 and later, you should export the
         environment variable <code class="literal">GLIBCPP_FORCE_NEW</code> before
         running your program.</p></li>
-<li class="listitem"><p>With GCC 3.4 and later, that variable has changed name to
+<li><p>With GCC 3.4 and later, that variable has changed name to
         <code class="literal">GLIBCXX_FORCE_NEW</code>.</p></li>
 </ul></div>
 <p>There are other ways to disable memory pooling: using the
@@ -412,8 +412,8 @@ collect2: ld returned 1 exit status
 <p>Also, <code class="option">-fomit-frame-pointer</code> and
     <code class="option">-fstack-check</code> can make stack traces worse.</p>
 <p>Some example sub-traces:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem">
+<div class="itemizedlist"><ul type="disc">
+<li>
 <p>With debug information and unstripped (best):</p>
 <pre class="programlisting">
 Invalid write of size 1
@@ -421,7 +421,7 @@ Invalid write of size 1
    by 0x8048370: main (malloc1.c:9)
 </pre>
 </li>
-<li class="listitem">
+<li>
 <p>With no debug information, unstripped:</p>
 <pre class="programlisting">
 Invalid write of size 1
@@ -429,7 +429,7 @@ Invalid write of size 1
    by 0x8048370: main (in /auto/homes/njn25/grind/head5/a.out)
 </pre>
 </li>
-<li class="listitem">
+<li>
 <p>With no debug information, stripped:</p>
 <pre class="programlisting">
 Invalid write of size 1
@@ -439,7 +439,7 @@ Invalid write of size 1
    by 0x80482CC: (within /auto/homes/njn25/grind/head5/a.out)
 </pre>
 </li>
-<li class="listitem">
+<li>
 <p>With debug information and -fomit-frame-pointer:</p>
 <pre class="programlisting">
 Invalid write of size 1
@@ -448,7 +448,7 @@ Invalid write of size 1
    by 0x80482CC: ??? (start.S:81)
 </pre>
 </li>
-<li class="listitem">
+<li>
 <p>A leak error message involving an unloaded shared object:</p>
 <pre class="programlisting">
 84 bytes in 1 blocks are possibly lost in loss record 488 of 713
@@ -634,27 +634,27 @@ int main(void)
 <td align="left" valign="top">
 <p>The details are in the Memcheck section of the user manual.</p>
 <p>In short:</p>
-<div class="itemizedlist"><ul class="itemizedlist" type="disc">
-<li class="listitem"><p>"definitely lost" means your program is leaking memory --
+<div class="itemizedlist"><ul type="disc">
+<li><p>"definitely lost" means your program is leaking memory --
         fix those leaks!</p></li>
-<li class="listitem"><p>"indirectly lost" means your program is leaking memory in
+<li><p>"indirectly lost" means your program is leaking memory in
         a pointer-based structure.  (E.g. if the root node of a binary tree
         is "definitely lost", all the children will be "indirectly lost".) 
         If you fix the "definitely lost" leaks, the "indirectly lost" leaks
         should go away.
         </p></li>
-<li class="listitem"><p>"possibly lost" means your program is leaking
+<li><p>"possibly lost" means your program is leaking
         memory, unless you're doing unusual things with pointers that could
         cause them to point into the middle of an allocated block;  see the
         user manual for some possible causes.  Use
         <code class="option">--show-possibly-lost=no</code> if you don't want to see
         these reports.</p></li>
-<li class="listitem"><p>"still reachable" means your program is probably ok -- it
+<li><p>"still reachable" means your program is probably ok -- it
         didn't free some memory it could have.  This is quite common and
         often reasonable.  Don't use
         <code class="option">--show-reachable=yes</code> if you don't want to see
         these reports.</p></li>
-<li class="listitem"><p>"suppressed" means that a leak error has been suppressed.
+<li><p>"suppressed" means that a leak error has been suppressed.
         There are some suppressions in the default suppression files.
         You can ignore suppressed errors.</p></li>
 </ul></div>
