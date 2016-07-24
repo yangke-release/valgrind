@@ -8,7 +8,7 @@
    This file is part of MemCheck, a heavyweight Valgrind tool for
    detecting memory errors.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -349,7 +349,7 @@ static void mc_pp_AddrInfo ( Addr a, AddrInfo* ai, Bool maybe_gcc )
 
       case Addr_DataSym:
          emiN( "%sAddress 0x%llx is %llu bytes "
-               "inside data symbol \"%pS\"%s\n",
+               "inside data symbol \"%t\"%s\n",
                xpre,
                (ULong)a,
                (ULong)ai->Addr.DataSym.offset,
@@ -372,7 +372,7 @@ static void mc_pp_AddrInfo ( Addr a, AddrInfo* ai, Bool maybe_gcc )
          break;
 
       case Addr_SectKind:
-         emiN( "%sAddress 0x%llx is in the %pS segment of %pS%s\n",
+         emiN( "%sAddress 0x%llx is in the %t segment of %t%s\n",
                xpre,
                (ULong)a,
                VG_(pp_SectKind)(ai->Addr.SectKind.kind),
@@ -460,7 +460,7 @@ void MC_(pp_Error) ( Error* err )
          // the following code is untested.  Bad.
          if (xml) {
             emit( "  <kind>CoreMemError</kind>\n" );
-            emiN( "  <what>%pS contains unaddressable byte(s)</what>\n",
+            emiN( "  <what>%t contains unaddressable byte(s)</what>\n",
                   VG_(get_error_string)(err));
             VG_(pp_ExeContext)( VG_(get_error_where)(err) );
          } else {
@@ -518,7 +518,7 @@ void MC_(pp_Error) ( Error* err )
          MC_(any_value_errors) = True;
          if (xml) {
             emit( "  <kind>SyscallParam</kind>\n" );
-            emiN( "  <what>Syscall param %pS contains "
+            emiN( "  <what>Syscall param %t contains "
                   "uninitialised byte(s)</what>\n",
                   VG_(get_error_string)(err) );
             VG_(pp_ExeContext)( VG_(get_error_where)(err) );
@@ -540,7 +540,7 @@ void MC_(pp_Error) ( Error* err )
             MC_(any_value_errors) = True;
          if (xml) {
             emit( "  <kind>SyscallParam</kind>\n" );
-            emiN( "  <what>Syscall param %pS points to %s byte(s)</what>\n",
+            emiN( "  <what>Syscall param %t points to %s byte(s)</what>\n",
                   VG_(get_error_string)(err),
                   extra->Err.MemParam.isAddrErr 
                      ? "unaddressable" : "uninitialised" );
@@ -669,7 +669,7 @@ void MC_(pp_Error) ( Error* err )
             emit( "  <kind>Overlap</kind>\n" );
             if (extra->Err.Overlap.szB == 0) {
                emiN( "  <what>Source and destination overlap "
-                     "in %pS(%#lx, %#lx)\n</what>\n",
+                     "in %t(%#lx, %#lx)\n</what>\n",
                      VG_(get_error_string)(err),
                      extra->Err.Overlap.dst, extra->Err.Overlap.src );
             } else {
@@ -682,7 +682,7 @@ void MC_(pp_Error) ( Error* err )
             VG_(pp_ExeContext)( VG_(get_error_where)(err) );
          } else {
             if (extra->Err.Overlap.szB == 0) {
-               emiN( "Source and destination overlap in %pS(%#lx, %#lx)\n",
+               emiN( "Source and destination overlap in %t(%#lx, %#lx)\n",
                      VG_(get_error_string)(err),
                      extra->Err.Overlap.dst, extra->Err.Overlap.src );
             } else {
@@ -1103,15 +1103,18 @@ static void describe_addr ( Addr a, /*OUT*/AddrInfo* ai )
       return;
    }
    /* -- Search for a recently freed block which might bracket it. -- */
-   mc = MC_(get_freed_block_bracketting)( a );
-   if (mc) {
-      ai->tag = Addr_Block;
-      ai->Addr.Block.block_kind = Block_Freed;
-      ai->Addr.Block.block_desc = "block";
-      ai->Addr.Block.block_szB  = mc->szB;
-      ai->Addr.Block.rwoffset   = (Word)a - (Word)mc->data;
-      ai->Addr.Block.lastchange = mc->where;
-      return;
+   mc = MC_(get_freed_list_head)();
+   while (mc) {
+      if (addr_is_in_MC_Chunk_default_REDZONE_SZB(mc, a)) {
+         ai->tag = Addr_Block;
+         ai->Addr.Block.block_kind = Block_Freed;
+         ai->Addr.Block.block_desc = "block";
+         ai->Addr.Block.block_szB  = mc->szB;
+         ai->Addr.Block.rwoffset   = (Word)a - (Word)mc->data;
+         ai->Addr.Block.lastchange = mc->where;
+         return;
+      }
+      mc = mc->next; 
    }
    /* -- Search for a currently malloc'd block which might bracket it. -- */
    VG_(HT_ResetIter)(MC_(malloc_list));

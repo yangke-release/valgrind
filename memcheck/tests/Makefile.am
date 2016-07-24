@@ -41,8 +41,7 @@ dist_noinst_SCRIPTS = \
 	filter_allocs \
 	filter_leak_cases_possible \
 	filter_stderr filter_xml \
-	filter_varinfo3 \
-	filter_memcheck
+	filter_varinfo3
 
 noinst_HEADERS = leak.h
 
@@ -57,18 +56,17 @@ EXTRA_DIST = \
 	badfree3.stderr.exp badfree3.vgtest \
 	badjump.stderr.exp badjump.vgtest \
 	badjump2.stderr.exp badjump2.vgtest \
-	badjump.stderr.exp-kfail \
-	badjump2.stderr.exp-kfail \
+	badjump.stderr.exp-s390x \
+	badjump2.stderr.exp-s390x \
 	badloop.stderr.exp badloop.vgtest \
 	badpoll.stderr.exp badpoll.vgtest \
-	badrw.stderr.exp badrw.vgtest badrw.stderr.exp-s390x-mvc \
-	big_blocks_freed_list.stderr.exp big_blocks_freed_list.vgtest \
+	badrw.stderr.exp badrw.vgtest \
 	brk2.stderr.exp brk2.vgtest \
-	buflen_check.stderr.exp buflen_check.vgtest buflen_check.stderr.exp-kfail \
+	buflen_check.stderr.exp buflen_check.vgtest \
 	calloc-overflow.stderr.exp calloc-overflow.vgtest\
 	clientperm.stderr.exp \
 	clientperm.stdout.exp clientperm.vgtest \
-	custom_alloc.stderr.exp custom_alloc.vgtest custom_alloc.stderr.exp-s390x-mvc \
+	custom_alloc.stderr.exp custom_alloc.vgtest \
 	custom-overlap.stderr.exp custom-overlap.vgtest \
 	deep_templates.vgtest \
 	deep_templates.stdout.exp deep_templates.stderr.exp \
@@ -82,13 +80,11 @@ EXTRA_DIST = \
 	error_counts.stderr.exp error_counts.vgtest \
 	errs1.stderr.exp errs1.vgtest \
 	exitprog.stderr.exp exitprog.vgtest \
-	execve1.stderr.exp execve1.vgtest execve1.stderr.exp-kfail \
-	execve2.stderr.exp execve2.vgtest execve2.stderr.exp-kfail \
+	execve.stderr.exp execve.vgtest \
+	execve2.stderr.exp execve2.vgtest \
 	file_locking.stderr.exp file_locking.vgtest \
 	fprw.stderr.exp fprw.vgtest \
-	fwrite.stderr.exp fwrite.vgtest fwrite.stderr.exp-kfail \
-	holey_buffer_too_small.vgtest holey_buffer_too_small.stdout.exp \
-	holey_buffer_too_small.stderr.exp \
+	fwrite.stderr.exp fwrite.vgtest \
 	inits.stderr.exp inits.vgtest \
 	inline.stderr.exp inline.stdout.exp inline.vgtest \
 	leak-0.vgtest leak-0.stderr.exp \
@@ -145,7 +141,6 @@ EXTRA_DIST = \
 	origin5-bz2.stderr.exp-glibc25-amd64 \
 	origin5-bz2.stderr.exp-glibc27-ppc64 \
 	origin5-bz2.stderr.exp-glibc212-s390x \
-	origin5-bz2.stderr.exp-glibc234-s390x \
 	origin6-fp.vgtest origin6-fp.stdout.exp \
 	origin6-fp.stderr.exp-glibc25-amd64 \
 	origin6-fp.stderr.exp-glibc27-ppc64 \
@@ -157,7 +152,6 @@ EXTRA_DIST = \
 	partiallydefinedeq.stdout.exp \
 	partial_load_ok.vgtest partial_load_ok.stderr.exp partial_load_ok.stderr.exp64 \
 	partial_load_dflt.vgtest partial_load_dflt.stderr.exp partial_load_dflt.stderr.exp64 \
-	partial_load_dflt.stderr.expr-s390x-mvc \
 	pdb-realloc.stderr.exp pdb-realloc.vgtest \
 	pdb-realloc2.stderr.exp pdb-realloc2.stdout.exp pdb-realloc2.vgtest \
 	pipe.stderr.exp pipe.vgtest \
@@ -180,12 +174,12 @@ EXTRA_DIST = \
 	str_tester.stderr.exp str_tester.vgtest \
 	supp-dir.vgtest supp-dir.stderr.exp \
 	supp_unknown.stderr.exp supp_unknown.vgtest supp_unknown.supp \
-	supp_unknown.stderr.exp-kfail \
+	supp_unknown.stderr.exp-s390x \
 	supp1.stderr.exp supp1.vgtest \
 	supp2.stderr.exp supp2.vgtest \
 	supp.supp \
 	suppfree.stderr.exp suppfree.vgtest \
-	trivialleak.stderr.exp trivialleak.vgtest trivialleak.stderr.exp2 \
+	trivialleak.stderr.exp trivialleak.vgtest \
 	unit_libcbase.stderr.exp unit_libcbase.vgtest \
 	unit_oset.stderr.exp unit_oset.stdout.exp unit_oset.vgtest \
 	varinfo1.vgtest varinfo1.stdout.exp varinfo1.stderr.exp varinfo1.stderr.exp-ppc64\
@@ -207,8 +201,8 @@ EXTRA_DIST = \
 	wrap7.vgtest wrap7.stdout.exp wrap7.stderr.exp \
 	wrap8.vgtest wrap8.stdout.exp wrap8.stderr.exp \
 	wrap8.stdout.exp2 wrap8.stderr.exp2 \
-	writev1.stderr.exp writev1.vgtest \
-	xml1.stderr.exp xml1.stdout.exp xml1.vgtest xml1.stderr.exp-s390x-mvc
+	writev.stderr.exp writev.vgtest \
+	xml1.stderr.exp xml1.stdout.exp xml1.vgtest
 
 check_PROGRAMS = \
 	addressable \
@@ -217,7 +211,6 @@ check_PROGRAMS = \
 	badloop \
 	badpoll \
 	badrw \
-	big_blocks_freed_list \
 	brk2 \
 	buflen_check \
 	calloc-overflow \
@@ -226,11 +219,10 @@ check_PROGRAMS = \
 	custom-overlap \
 	deep_templates \
 	describe-block \
-	doublefree error_counts errs1 exitprog execve1 execve2 erringfds \
+	doublefree error_counts errs1 exitprog execve execve2 erringfds \
 	err_disable1 err_disable2 err_disable3 err_disable4 \
 	file_locking \
 	fprw fwrite inits inline \
-	holey_buffer_too_small \
 	leak-0 \
 	leak-cases \
 	leak-cycle \
@@ -269,7 +261,7 @@ check_PROGRAMS = \
 	vcpu_fbench vcpu_fnfns \
 	xml1 \
 	wrap1 wrap2 wrap3 wrap4 wrap5 wrap6 wrap7 wrap7so.so wrap8 \
-	writev1
+	writev
 
 
 AM_CFLAGS   += $(AM_FLAG_M3264_PRI)
@@ -294,9 +286,9 @@ err_disable4_LDADD 	= -lpthread
 
 error_counts_CFLAGS = $(AM_CFLAGS) @FLAG_W_NO_UNINITIALIZED@
 
-execve1_CFLAGS = $(AM_CFLAGS) @FLAG_W_NO_NONNULL@
+execve_CFLAGS = $(AM_CFLAGS) @FLAG_W_NO_NONNULL@
 
-execve2_CFLAGS = $(AM_CFLAGS) @FLAG_W_NO_NONNULL@
+execve2_CFLAGS = $(AM_CFLASG) @FLAG_W_NO_NONNULL@
 
 inits_CFLAGS = $(AM_CFLAGS) @FLAG_W_NO_UNINITIALIZED@
 

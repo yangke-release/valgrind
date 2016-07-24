@@ -9,7 +9,7 @@
    This file is part of MemCheck, a heavyweight Valgrind tool for
    detecting memory errors.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -45,9 +45,41 @@
 #include "pub_tool_tooliface.h"
 #include "pub_tool_threadstate.h"
 
+#include "pub_tool_libcfile.h"
+#include "pub_tool_vki.h"
+#include "pub_tool_vkiscnums.h"
+
 #include "mc_include.h"
 #include "memcheck.h"   /* for client requests */
 
+#include <avalanche.h>
+
+#ifdef WITH_AVALANCHE
+
+VgHashTable basicBlocksTable;
+
+UInt alarm = 0;
+
+extern UShort port;
+extern Bool sockets;
+extern Bool datagrams;
+extern UChar ip1, ip2, ip3, ip4;
+extern Int cursocket;
+extern ULong curoffs;
+
+Bool replace = False;
+Bool isRead = False;
+Bool noCoverage = False;
+extern Bool isRecv;
+
+static Int socketsNum = 0;
+static Int socketsBoundary;
+static replaceData* replace_data;
+static Char* bbFileName = NULL;
+static Char* tempDir;
+static Char* replaceFileName;
+
+#endif
 
 /* We really want this frame-pointer-less on all platforms, since the
    helper functions are small and called very frequently.  By default
@@ -3553,65 +3585,6 @@ static MC_ReadResult is_mem_defined ( Addr a, SizeT len,
 }
 
 
-/* Like is_mem_defined but doesn't give up at the first uninitialised
-   byte -- the entire range is always checked.  This is important for
-   detecting errors in the case where a checked range strays into
-   invalid memory, but that fact is not detected by the ordinary
-   is_mem_defined(), because of an undefined section that precedes the
-   out of range section, possibly as a result of an alignment hole in
-   the checked data.  This version always checks the entire range and
-   can report both a definedness and an accessbility error, if
-   necessary. */
-static void is_mem_defined_comprehensive (
-               Addr a, SizeT len,
-               /*OUT*/Bool* errorV,    /* is there a definedness err? */
-               /*OUT*/Addr* bad_addrV, /* if so where? */
-               /*OUT*/UInt* otagV,     /* and what's its otag? */
-               /*OUT*/Bool* errorA,    /* is there an addressability err? */
-               /*OUT*/Addr* bad_addrA  /* if so where? */
-            )
-{
-   SizeT i;
-   UWord vabits2;
-   Bool  already_saw_errV = False;
-
-   PROF_EVENT(64, "is_mem_defined"); // fixme
-   DEBUG("is_mem_defined_comprehensive\n");
-
-   tl_assert(!(*errorV || *errorA));
-
-   for (i = 0; i < len; i++) {
-      PROF_EVENT(65, "is_mem_defined(loop)"); // fixme
-      vabits2 = get_vabits2(a);
-      switch (vabits2) {
-         case VA_BITS2_DEFINED: 
-            a++; 
-            break;
-         case VA_BITS2_UNDEFINED:
-         case VA_BITS2_PARTDEFINED:
-            if (!already_saw_errV) {
-               *errorV    = True;
-               *bad_addrV = a;
-               if (MC_(clo_mc_level) == 3) {
-                  *otagV = MC_(helperc_b_load1)( a );
-               } else {
-                  *otagV = 0;
-               }
-               already_saw_errV = True;
-            }
-            a++; /* keep going */
-            break;
-         case VA_BITS2_NOACCESS:
-            *errorA    = True;
-            *bad_addrA = a;
-            return; /* give up now. */
-         default:
-            tl_assert(0);
-      }
-   }
-}
-
-
 /* Check a zero-terminated ascii string.  Tricky -- don't want to
    examine the actual bytes, to find the end, until we're sure it is
    safe to do so. */
@@ -3800,6 +3773,59 @@ void mc_new_mem_mmap ( Addr a, SizeT len, Bool rr, Bool ww, Bool xx,
 }
 
 static
+void mc_post_mem_write(CorePart part, ThreadId tid, Addr a, SizeT size)
+{
+  MC_(make_mem_defined)(a, size);
+  
+#ifdef WITH_AVALANCHE
+  Addr index; 
+  if ((isRead || isRecv) && (sockets || datagrams) && (cursocket != -1))
+  {
+    if (replace)
+    {
+      if (cursocket >= socketsNum)
+      {
+        if (replace_data == NULL)
+        {
+          replace_data = (replaceData*) VG_(malloc)("replace_data", (cursocket + 1) * sizeof(replaceData));
+        }
+        else
+        {
+          replace_data = (replaceData*) VG_(realloc)("replace_data", replace_data, (cursocket + 1) * sizeof(replaceData));
+        }
+        Int i = socketsNum;
+        for (; i <= cursocket; i++)
+        {
+          replace_data[i].length = 0;
+          replace_data[i].data = NULL;
+        }
+        socketsNum = cursocket + 1;
+      }
+      Int oldlength = replace_data[cursocket].length;
+      if (replace_data[cursocket].length < curoffs + size)
+      {
+        replace_data[cursocket].data = (UChar*) VG_(realloc)("replace_data", replace_data[cursocket].data, curoffs + size);
+        VG_(memset)(replace_data[cursocket].data + replace_data[cursocket].length, 0, curoffs + size - replace_data[cursocket].length);
+        replace_data[cursocket].length = curoffs + size;
+      }
+      for (index = a; index < a + size; index++)
+      {
+        if ((cursocket < socketsBoundary) && (curoffs + (index - a) < oldlength))
+        {
+          *((UChar*) index) = replace_data[cursocket].data[curoffs + (index - a)];
+        }
+        else
+        {
+          replace_data[cursocket].data[curoffs + (index - a)] = *((UChar*) index);
+        }
+      }
+    }
+  }
+#endif
+}
+
+
+static
 void mc_new_mem_mprotect ( Addr a, SizeT len, Bool rr, Bool ww, Bool xx )
 {
    if (rr || ww || xx) {
@@ -3835,13 +3861,6 @@ void mc_new_mem_startup( Addr a, SizeT len,
          a, (ULong)len, rr, ww, xx);
    mc_new_mem_mmap(a, len, rr, ww, xx, di_handle);
 }
-
-static
-void mc_post_mem_write(CorePart part, ThreadId tid, Addr a, SizeT len)
-{
-   MC_(make_mem_defined)(a, len);
-}
-
 
 /*------------------------------------------------------------*/
 /*--- Register event handlers                              ---*/
@@ -4760,7 +4779,6 @@ static Bool mc_expensive_sanity_check ( void )
 
 Bool          MC_(clo_partial_loads_ok)       = False;
 Long          MC_(clo_freelist_vol)           = 20*1000*1000LL;
-Long          MC_(clo_freelist_big_blocks)    =  1*1000*1000LL;
 LeakCheckMode MC_(clo_leak_check)             = LC_Summary;
 VgRes         MC_(clo_leak_resolution)        = Vg_HighRes;
 Bool          MC_(clo_show_reachable)         = False;
@@ -4772,6 +4790,8 @@ Int           MC_(clo_mc_level)               = 2;
 
 static Bool mc_process_cmd_line_options(Char* arg)
 {
+  Char* addr;
+
    Char* tmp_str;
 
    tl_assert( MC_(clo_mc_level) >= 1 && MC_(clo_mc_level) <= 3 );
@@ -4812,7 +4832,7 @@ static Bool mc_process_cmd_line_options(Char* arg)
       }
    }
 
-	if VG_BOOL_CLO(arg, "--partial-loads-ok", MC_(clo_partial_loads_ok)) {}
+   if VG_BOOL_CLO(arg, "--partial-loads-ok", MC_(clo_partial_loads_ok)) {}
    else if VG_BOOL_CLO(arg, "--show-reachable",   MC_(clo_show_reachable))   {}
    else if VG_BOOL_CLO(arg, "--show-possibly-lost",
                                             MC_(clo_show_possibly_lost))     {}
@@ -4821,11 +4841,7 @@ static Bool mc_process_cmd_line_options(Char* arg)
 
    else if VG_BINT_CLO(arg, "--freelist-vol",  MC_(clo_freelist_vol), 
                                                0, 10*1000*1000*1000LL) {}
-
-   else if VG_BINT_CLO(arg, "--freelist-big-blocks",
-                       MC_(clo_freelist_big_blocks),
-                       0, 10*1000*1000*1000LL) {}
-
+   
    else if VG_XACT_CLO(arg, "--leak-check=no",
                             MC_(clo_leak_check), LC_Off) {}
    else if VG_XACT_CLO(arg, "--leak-check=summary",
@@ -4873,8 +4889,53 @@ static Bool mc_process_cmd_line_options(Char* arg)
    else if VG_BHEX_CLO(arg, "--malloc-fill", MC_(clo_malloc_fill), 0x00,0xFF) {}
    else if VG_BHEX_CLO(arg, "--free-fill",   MC_(clo_free_fill),   0x00,0xFF) {}
 
-   else
+#ifdef WITH_AVALANCHE
+   else if (VG_INT_CLO(arg, "--alarm", alarm)) { 
+      return True;
+   }
+   else if (VG_STR_CLO(arg, "--port", addr)) {
+      port = (UShort) VG_(strtoll10)(addr, NULL);
+      return True;
+   }
+   else if (VG_BOOL_CLO(arg, "--sockets", sockets)) { 
+      return True; 
+   }
+   else if (VG_BOOL_CLO(arg, "--datagrams", datagrams)) { 
+      return True; 
+   }
+   else if (VG_BOOL_CLO(arg, "--no-coverage", noCoverage)) { 
+      return True; 
+   }
+   else if (VG_STR_CLO(arg, "--filename", bbFileName)) {
+      return True;
+   }
+   else if (VG_STR_CLO(arg, "--temp-dir", tempDir)) {
+      return True;
+   }
+   else if (VG_STR_CLO(arg, "--replace",  replaceFileName)) { 
+      replace = True;
+      return True; 
+   }
+   else if (VG_STR_CLO(arg, "--host", addr)) {
+      Char* dot = VG_(strchr)(addr, '.');
+      *dot = '\0';
+      ip1 = (UShort) VG_(strtoll10)(addr, NULL);
+      addr = dot + 1;
+      dot = VG_(strchr)(addr, '.');
+      *dot = '\0';
+      ip2 = (UShort) VG_(strtoll10)(addr, NULL);
+      addr = dot + 1;
+      dot = VG_(strchr)(addr, '.');
+      *dot = '\0';
+      ip3 = (UShort) VG_(strtoll10)(addr, NULL);
+      addr = dot + 1;
+      ip4 = (UShort) VG_(strtoll10)(addr, NULL);
+      return True;
+   }
+#endif
+   else {
       return VG_(replacement_malloc_process_cmd_line_option)(arg);
+   }
 
    return True;
 
@@ -4895,8 +4956,7 @@ static void mc_print_usage(void)
 "    --undef-value-errors=no|yes      check for undefined value errors [yes]\n"
 "    --track-origins=no|yes           show origins of undefined values? [no]\n"
 "    --partial-loads-ok=no|yes        too hard to explain here; see manual [no]\n"
-"    --freelist-vol=<number>          volume of freed blocks queue      [20000000]\n"
-"    --freelist-big-blocks=<number>   releases first blocks with size >= [1000000]\n"
+"    --freelist-vol=<number>          volume of freed blocks queue [20000000]\n"
 "    --workaround-gcc296-bugs=no|yes  self explanatory [no]\n"
 "    --ignore-ranges=0xPP-0xQQ[,0xRR-0xSS]   assume given addresses are OK\n"
 "    --malloc-fill=<hexnumber>        fill malloc'd areas with given value\n"
@@ -5257,34 +5317,14 @@ static Bool mc_handle_client_request ( ThreadId tid, UWord* arg, UWord* ret )
          break;
 
       case VG_USERREQ__CHECK_MEM_IS_DEFINED: {
-         Bool errorV    = False;
-         Addr bad_addrV = 0;
-         UInt otagV     = 0;
-         Bool errorA    = False;
-         Addr bad_addrA = 0;
-         is_mem_defined_comprehensive( 
-            arg[1], arg[2],
-            &errorV, &bad_addrV, &otagV, &errorA, &bad_addrA
-         );
-         if (errorV) {
-            MC_(record_user_error) ( tid, bad_addrV,
-                                     /*isAddrErr*/False, otagV );
-         }
-         if (errorA) {
-            MC_(record_user_error) ( tid, bad_addrA,
-                                     /*isAddrErr*/True, 0 );
-         }
-         /* Return the lower of the two erring addresses, if any. */
-         *ret = 0;
-         if (errorV && !errorA) {
-            *ret = bad_addrV;
-         }
-         if (!errorV && errorA) {
-            *ret = bad_addrA;
-         }
-         if (errorV && errorA) {
-            *ret = bad_addrV < bad_addrA ? bad_addrV : bad_addrA;
-         }
+         MC_ReadResult res;
+         UInt otag = 0;
+         res = is_mem_defined ( arg[1], arg[2], &bad_addr, &otag );
+         if (MC_AddrErr == res)
+            MC_(record_user_error) ( tid, bad_addr, /*isAddrErr*/True, 0 );
+         else if (MC_ValueErr == res)
+            MC_(record_user_error) ( tid, bad_addr, /*isAddrErr*/False, otag );
+         *ret = ( res==MC_Ok ? (UWord)NULL : bad_addr );
          break;
       }
 
@@ -5910,6 +5950,26 @@ static void ocache_sarp_Clear_Origins ( Addr a, UWord len ) {
 }
 
 
+static
+Char* concatTempDir(Char* fileName)
+{
+  Char* result;
+  if (tempDir == NULL)
+  {
+    result = VG_(malloc)(fileName, VG_(strlen)(fileName) + 1);
+    VG_(strcpy)(result, fileName);
+  }
+  else
+  {
+    Int length = VG_(strlen)(tempDir);
+    result = VG_(malloc)(fileName, length + VG_(strlen)(fileName) + 1);
+    VG_(strcpy)(result, tempDir);
+    VG_(strcpy)(result + length, fileName);
+    result[length + VG_(strlen)(fileName)] = '\0';
+  }
+  return result;
+}
+
 /*------------------------------------------------------------*/
 /*--- Setup and finalisation                               ---*/
 /*------------------------------------------------------------*/
@@ -5923,13 +5983,6 @@ static void mc_post_clo_init ( void )
       /* MC_(clo_show_reachable) = True; */
       MC_(clo_leak_check) = LC_Full;
    }
-
-   if (MC_(clo_freelist_big_blocks) >= MC_(clo_freelist_vol))
-      VG_(message)(Vg_UserMsg,
-                   "Warning: --freelist-big-blocks value %lld has no effect\n"
-                   "as it is >= to --freelist-vol value %lld\n",
-                   MC_(clo_freelist_big_blocks),
-                   MC_(clo_freelist_vol));
 
    tl_assert( MC_(clo_mc_level) >= 1 && MC_(clo_mc_level) <= 3 );
 
@@ -5973,6 +6026,32 @@ static void mc_post_clo_init ( void )
       tl_assert(ocacheL1 == NULL);
       tl_assert(ocacheL2 == NULL);
    }
+
+#ifdef WITH_AVALANCHE  
+   if (replace) {
+      Char *replaceFile = concatTempDir(replaceFileName);
+      Int fd = sr_Res(VG_(open)(replaceFile, VKI_O_RDWR, VKI_S_IRWXU | VKI_S_IRWXG | VKI_S_IRWXO));
+      VG_(read)(fd, &socketsNum, 4);
+      socketsBoundary = socketsNum;
+      if (socketsNum > 0) {
+         replace_data = (replaceData*) VG_(malloc)("replace_data", socketsNum * sizeof(replaceData));
+         Int i;
+         for (i = 0; i < socketsNum; i++) {
+            VG_(read)(fd, &(replace_data[i].length), sizeof(Int));
+            replace_data[i].data = (Char*) VG_(malloc)("replace_data", replace_data[i].length);
+            VG_(read)(fd, replace_data[i].data, replace_data[i].length);
+         }
+      } else {
+         replace_data = NULL;
+      }
+      VG_(close)(fd);
+      VG_(free)(replaceFile);
+   }
+
+   if (alarm != 0) {
+      VG_(alarm)(alarm);
+   }
+#endif
 }
 
 static void print_SM_info(char* type, int n_SMs)
@@ -5987,6 +6066,38 @@ static void print_SM_info(char* type, int n_SMs)
 
 static void mc_fini ( Int exitcode )
 {
+#ifdef WITH_AVALANCHE
+  if (!noCoverage)
+  {
+    VG_(HT_ResetIter)(basicBlocksTable);
+    bbNode* n = (bbNode*) VG_(HT_Next)(basicBlocksTable);
+    SysRes fd;
+    Char *bbFile;
+    if (bbFileName != NULL)
+    {
+      bbFile = concatTempDir(bbFileName);
+    }
+    else
+    {
+      bbFile = concatTempDir("basic_blocks.log");
+    }
+    fd = VG_(open)(bbFile, VKI_O_WRONLY | VKI_O_TRUNC | VKI_O_CREAT, 
+                    VKI_S_IRUSR | VKI_S_IROTH | VKI_S_IRGRP |
+                    VKI_S_IWUSR | VKI_S_IWOTH | VKI_S_IWGRP);
+    VG_(free)(bbFile);
+    if (!sr_isError(fd))
+    {
+      while (n != NULL)
+      {
+        UWord addr = n->key;
+        VG_(write)(sr_Res(fd), &addr, sizeof(addr));
+        n = (bbNode*) VG_(HT_Next)(basicBlocksTable);
+      }
+      VG_(close)(sr_Res(fd));
+    }
+  }
+#endif
+
    MC_(print_malloc_stats)();
 
    if (MC_(clo_leak_check) != LC_Off) {
@@ -6130,13 +6241,37 @@ static Bool mc_mark_unaddressable_for_watchpoint (PointKind kind, Bool insert,
    return True;
 }
 
+#ifdef WITH_AVALANCHE
+static void pre_call(ThreadId tid, UInt syscallno)
+{
+  if (syscallno == __NR_read)
+  {
+    isRead = True;
+  }
+}
+
+static void post_call(ThreadId tid, UInt syscallno, SysRes res)
+{
+  if (syscallno == __NR_read)
+  {
+    isRead = False;
+  }
+  else if ((syscallno == __NR_clone) && !sr_isError(res) && (sr_Res(res) == 0))
+  {
+    //VG_(printf)("__NR_clone\n");
+    //VG_(exit)(0);
+  }
+}
+#endif
+
+
 static void mc_pre_clo_init(void)
 {
    VG_(details_name)            ("Memcheck");
    VG_(details_version)         (NULL);
    VG_(details_description)     ("a memory error detector");
    VG_(details_copyright_author)(
-      "Copyright (C) 2002-2011, and GNU GPL'd, by Julian Seward et al.");
+      "Copyright (C) 2002-2010, and GNU GPL'd, by Julian Seward et al.");
    VG_(details_bug_reports_to)  (VG_BUGS_TO);
    VG_(details_avg_translation_sizeB) ( 640 );
 
@@ -6325,6 +6460,13 @@ static void mc_pre_clo_init(void)
    tl_assert(MASK(4) == 0xFFFFFFF800000003ULL);
    tl_assert(MASK(8) == 0xFFFFFFF800000007ULL);
 #  endif
+
+#ifdef WITH_AVALANCHE
+   VG_(needs_syscall_wrapper)(pre_call,
+ 			      post_call);
+
+   basicBlocksTable = VG_(HT_construct)("basicBlocksTable");
+#endif
 }
 
 VG_DETERMINE_INTERFACE_VERSION(mc_pre_clo_init)

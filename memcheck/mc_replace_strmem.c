@@ -9,7 +9,7 @@
    This file is part of MemCheck, a heavyweight Valgrind tool for
    detecting memory errors.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -93,7 +93,6 @@
    20320 STRPBRK
    20330 STRCSPN
    20340 STRSPN
-   20350 STRCASESTR
 */
 
 
@@ -141,7 +140,7 @@ static inline void my_exit ( int x )
    __asm__ __volatile__(".word 0xFFFFFFFF");
    while (1) {}
 #  else
-   extern __attribute__ ((__noreturn__)) void _exit(int status);
+   extern void _exit(int status);
    _exit(x);
 #  endif
 }
@@ -150,7 +149,7 @@ static inline void my_exit ( int x )
 // This is a macro rather than a function because we don't want to have an
 // extra function in the stack trace.
 #define RECORD_OVERLAP_ERROR(s, src, dst, len)                  \
-  VALGRIND_DO_CLIENT_REQUEST_STMT(                              \
+  VALGRIND_DO_CLIENT_REQUEST_EXPR(0,                            \
                   _VG_USERREQ__MEMCHECK_RECORD_OVERLAP_ERROR,   \
                   s, src, dst, len, 0)
 
@@ -1446,56 +1445,6 @@ static inline void my_exit ( int x )
 
 #if defined(VGO_linux)
  STRSPN(VG_Z_LIBC_SONAME,          strspn)
-
-#elif defined(VGO_darwin)
-
-#endif
-
-
-/*---------------------- strcasestr ----------------------*/
-
-#define STRCASESTR(soname, fnname) \
-   void* VG_REPLACE_FUNCTION_EZU(20350,soname,fnname) \
-         (void* haystack, void* needle); \
-   void* VG_REPLACE_FUNCTION_EZU(20350,soname,fnname) \
-         (void* haystack, void* needle) \
-   { \
-      extern int tolower(int); \
-      UChar* h = (UChar*)haystack; \
-      UChar* n = (UChar*)needle; \
-      \
-      /* find the length of n, not including terminating zero */ \
-      UWord nlen = 0; \
-      while (n[nlen]) nlen++; \
-      \
-      /* if n is the empty string, match immediately. */ \
-      if (nlen == 0) return h; \
-      \
-      /* assert(nlen >= 1); */ \
-      UChar n0 = tolower(n[0]);                 \
-      \
-      while (1) { \
-         UChar hh = tolower(*h);    \
-         if (hh == 0) return NULL; \
-         if (hh != n0) { h++; continue; } \
-         \
-         UWord i; \
-         for (i = 0; i < nlen; i++) { \
-            if (tolower(n[i]) != tolower(h[i]))  \
-               break; \
-         } \
-         /* assert(i >= 0 && i <= nlen); */ \
-         if (i == nlen) \
-            return h; \
-         \
-         h++; \
-      } \
-   }
-
-#if defined(VGO_linux)
-# if !defined(VGPV_arm_linux_android)
-  STRCASESTR(VG_Z_LIBC_SONAME,      strcasestr)
-# endif
 
 #elif defined(VGO_darwin)
 
