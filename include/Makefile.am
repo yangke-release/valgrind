@@ -1,7 +1,7 @@
 
 # The "nobase" means that the vki/ path on some of them will be preserved
 # when they are installed into $(includedir)/valgrind.
-nobase_pkginclude_HEADERS = \
+noinst_HEADERS = \
 	pub_tool_basics.h 		\
 	pub_tool_basics_asm.h 		\
 	pub_tool_aspacehl.h 		\
@@ -39,6 +39,7 @@ nobase_pkginclude_HEADERS = \
 	pub_tool_wordfm.h		\
 	pub_tool_xarray.h		\
 	valgrind.h			\
+	avalanche.h			\
 	vki/vki-linux.h			\
 	vki/vki-darwin.h		\
 	vki/vki-posixtypes-amd64-linux.h \
