@@ -73,7 +73,7 @@
 #define OFFSET_s390x_r6 240
 #define OFFSET_s390x_r7 248
 #define OFFSET_s390x_r15 312
-#define OFFSET_s390x_IA 336
-#define OFFSET_s390x_SYSNO 344
-#define OFFSET_s390x_IP_AT_SYSCALL 408
+#define OFFSET_s390x_IA 332
+#define OFFSET_s390x_SYSNO 340
+#define OFFSET_s390x_IP_AT_SYSCALL 404
 #define OFFSET_s390x_fpc 328

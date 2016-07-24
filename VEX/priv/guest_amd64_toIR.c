@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2004-2011 OpenWorks LLP
+   Copyright (C) 2004-2010 OpenWorks LLP
       info@open-works.net
 
    This program is free software; you can redistribute it and/or
@@ -15465,7 +15465,7 @@ DisResult disInstr_AMD64_WRK (
                  isD ? getXMMRegLane64F( eregOfRexRM(pfx, modrm), 0 )
                      : getXMMRegLane32F( eregOfRexRM(pfx, modrm), 0 ) );
          imm = insn[3+1];
-         if (imm & ~15) goto decode_failure;
+         if (imm & ~7) goto decode_failure;
          delta += 3+1+1;
          DIP( "rounds%c $%d,%s,%s\n",
               isD ? 'd' : 's',
@@ -15475,7 +15475,7 @@ DisResult disInstr_AMD64_WRK (
          addr = disAMode( &alen, vbi, pfx, delta+3, dis_buf, 0 );
          assign( src, loadLE( isD ? Ity_F64 : Ity_F32, mkexpr(addr) ));
          imm = insn[3+alen];
-         if (imm & ~15) goto decode_failure;
+         if (imm & ~7) goto decode_failure;
          delta += 3+alen+1;
          DIP( "rounds%c $%d,%s,%s\n",
               isD ? 'd' : 's',
@@ -15520,7 +15520,7 @@ DisResult disInstr_AMD64_WRK (
          assign( src1, 
                  getXMMRegLane64F( eregOfRexRM(pfx, modrm), 1 ) );
          imm = insn[3+1];
-         if (imm & ~15) goto decode_failure;
+         if (imm & ~7) goto decode_failure;
          delta += 3+1+1;
          DIP( "roundpd $%d,%s,%s\n",
               imm, nameXMMReg( eregOfRexRM(pfx, modrm) ),
@@ -15533,7 +15533,7 @@ DisResult disInstr_AMD64_WRK (
          assign( src1, loadLE(Ity_F64,
                               binop(Iop_Add64, mkexpr(addr), mkU64(8) )));
          imm = insn[3+alen];
-         if (imm & ~15) goto decode_failure;
+         if (imm & ~7) goto decode_failure;
          delta += 3+alen+1;
          DIP( "roundpd $%d,%s,%s\n",
               imm, dis_buf, nameXMMReg( gregOfRexRM(pfx, modrm) ) );
@@ -15583,7 +15583,7 @@ DisResult disInstr_AMD64_WRK (
          assign( src3, 
                  getXMMRegLane32F( eregOfRexRM(pfx, modrm), 3 ) );
          imm = insn[3+1];
-         if (imm & ~15) goto decode_failure;
+         if (imm & ~7) goto decode_failure;
          delta += 3+1+1;
          DIP( "roundps $%d,%s,%s\n",
               imm, nameXMMReg( eregOfRexRM(pfx, modrm) ),
@@ -15600,7 +15600,7 @@ DisResult disInstr_AMD64_WRK (
          assign( src3, loadLE(Ity_F32,
                               binop(Iop_Add64, mkexpr(addr), mkU64(12) )));
          imm = insn[3+alen];
-         if (imm & ~15) goto decode_failure;
+         if (imm & ~7) goto decode_failure;
          delta += 3+alen+1;
          DIP( "roundps $%d,%s,%s\n",
               imm, dis_buf, nameXMMReg( gregOfRexRM(pfx, modrm) ) );
@@ -15733,7 +15733,7 @@ DisResult disInstr_AMD64_WRK (
       switch (imm) {
          case 0x00:
          case 0x02: case 0x08: case 0x0A: case 0x0C: case 0x12:
-         case 0x1A: case 0x38: case 0x3A: case 0x44: case 0x4A:
+         case 0x1A: case 0x3A: case 0x44: case 0x4A:
             break;
          default:
             goto decode_failure;
@@ -15814,8 +15814,7 @@ DisResult disInstr_AMD64_WRK (
 
    /* 66 0f 38 17 /r = PTEST xmm1, xmm2/m128
       Logical compare (set ZF and CF from AND/ANDN of the operands) */
-   if (have66noF2noF3( pfx )
-       && (sz == 2 || /* ignore redundant REX.W */ sz == 8)
+   if (have66noF2noF3( pfx ) && sz == 2 
        && insn[0] == 0x0F && insn[1] == 0x38 && insn[2] == 0x17) {
       modrm = insn[3];
       IRTemp vecE = newTemp(Ity_V128);
@@ -16093,57 +16092,6 @@ DisResult disInstr_AMD64_WRK (
                  binop( Iop_QNarrowBin32Sto16Ux8,
                         mkexpr(argL), mkexpr(argR)) );
 
-      goto decode_success;
-   }
-
-   /* 66 0F 38 28 = PMULUDQ -- signed widening multiply of 32-lanes 0 x
-      0 to form lower 64-bit half and lanes 2 x 2 to form upper 64-bit
-      half */
-   /* This is a really poor translation -- could be improved if
-      performance critical.  It's a copy-paste of PMULDQ, too. */
-   if (have66noF2noF3(pfx) && sz == 2 
-       && insn[0] == 0x0F && insn[1] == 0x38 && insn[2] == 0x28) {
-      IRTemp sV, dV;
-      IRTemp s3, s2, s1, s0, d3, d2, d1, d0;
-      sV = newTemp(Ity_V128);
-      dV = newTemp(Ity_V128);
-      s3 = s2 = s1 = s0 = d3 = d2 = d1 = d0 = IRTemp_INVALID;
-      t1 = newTemp(Ity_I64);
-      t0 = newTemp(Ity_I64);
-      modrm = insn[3];
-      assign( dV, getXMMReg(gregOfRexRM(pfx,modrm)) );
-
-      if (epartIsReg(modrm)) {
-         assign( sV, getXMMReg(eregOfRexRM(pfx,modrm)) );
-         delta += 3+1;
-         DIP("pmuldq %s,%s\n", nameXMMReg(eregOfRexRM(pfx,modrm)),
-                               nameXMMReg(gregOfRexRM(pfx,modrm)));
-      } else {
-         addr = disAMode ( &alen, vbi, pfx, delta+3, dis_buf, 0 );
-         assign( sV, loadLE(Ity_V128, mkexpr(addr)) );
-         delta += 3+alen;
-         DIP("pmuldq %s,%s\n", dis_buf,
-                               nameXMMReg(gregOfRexRM(pfx,modrm)));
-      }
-
-      breakup128to32s( dV, &d3, &d2, &d1, &d0 );
-      breakup128to32s( sV, &s3, &s2, &s1, &s0 );
-
-      assign( t0, binop( Iop_MullS32, mkexpr(d0), mkexpr(s0)) );
-      putXMMRegLane64( gregOfRexRM(pfx,modrm), 0, mkexpr(t0) );
-      assign( t1, binop( Iop_MullS32, mkexpr(d2), mkexpr(s2)) );
-      putXMMRegLane64( gregOfRexRM(pfx,modrm), 1, mkexpr(t1) );
-      goto decode_success;
-   }
-
-   /* 66 0F 38 29 = PCMPEQQ
-      64x2 equality comparison
-   */
-   if ( have66noF2noF3( pfx ) && sz == 2 
-        && insn[0] == 0x0F && insn[1] == 0x38 && insn[2] == 0x29) {
-      /* FIXME: this needs an alignment check */
-      delta = dis_SSEint_E_to_G( vbi, pfx, delta+3, 
-                                 "pcmpeqq", Iop_CmpEQ64x2, False );
       goto decode_success;
    }
 

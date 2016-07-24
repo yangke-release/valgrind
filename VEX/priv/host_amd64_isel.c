@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2004-2011 OpenWorks LLP
+   Copyright (C) 2004-2010 OpenWorks LLP
       info@open-works.net
 
    This program is free software; you can redistribute it and/or
@@ -1100,10 +1100,6 @@ static HReg iselIntExpr_R_wrk ( ISelEnv* env, IRExpr* e )
             fn = (HWord)h_generic_calc_QNarrowBin16Sto8Sx8; break;
          case Iop_QNarrowBin16Sto8Ux8:
             fn = (HWord)h_generic_calc_QNarrowBin16Sto8Ux8; break;
-         case Iop_NarrowBin16to8x8:
-            fn = (HWord)h_generic_calc_NarrowBin16to8x8; break;
-         case Iop_NarrowBin32to16x4:
-            fn = (HWord)h_generic_calc_NarrowBin32to16x4; break;
 
          case Iop_QSub8Sx8:
             fn = (HWord)h_generic_calc_QSub8Sx8; break;
@@ -3662,18 +3658,10 @@ static HReg iselVecExpr_wrk ( ISelEnv* env, IRExpr* e )
                            goto do_SseAssistedBinary;
       case Iop_Min8Sx16:   fn = (HWord)h_generic_calc_Min8Sx16;
                            goto do_SseAssistedBinary;
-      case Iop_CmpEQ64x2:  fn = (HWord)h_generic_calc_CmpEQ64x2;
-                           goto do_SseAssistedBinary;
       case Iop_CmpGT64Sx2: fn = (HWord)h_generic_calc_CmpGT64Sx2;
                            goto do_SseAssistedBinary;
       case Iop_QNarrowBin32Sto16Ux8:
                            fn = (HWord)h_generic_calc_QNarrowBin32Sto16Ux8;
-                           goto do_SseAssistedBinary;
-      case Iop_NarrowBin16to8x16:
-                           fn = (HWord)h_generic_calc_NarrowBin16to8x16;
-                           goto do_SseAssistedBinary;
-      case Iop_NarrowBin32to16x8:
-                           fn = (HWord)h_generic_calc_NarrowBin32to16x8;
                            goto do_SseAssistedBinary;
       do_SseAssistedBinary: {
          /* RRRufff!  RRRufff code is what we're generating here.  Oh

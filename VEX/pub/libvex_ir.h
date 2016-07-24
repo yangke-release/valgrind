@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2004-2011 OpenWorks LLP
+   Copyright (C) 2004-2010 OpenWorks LLP
       info@open-works.net
 
    This program is free software; you can redistribute it and/or
@@ -923,7 +923,6 @@ typedef
       */
       Iop_QNarrowBin16Sto8Ux8,
       Iop_QNarrowBin16Sto8Sx8, Iop_QNarrowBin32Sto16Sx4,
-      Iop_NarrowBin16to8x8,    Iop_NarrowBin32to16x4,
 
       /* INTERLEAVING */
       /* Interleave lanes from low or high halves of
@@ -1171,7 +1170,7 @@ typedef
       Iop_Min8Ux16, Iop_Min16Ux8, Iop_Min32Ux4,
 
       /* COMPARISON */
-      Iop_CmpEQ8x16,  Iop_CmpEQ16x8,  Iop_CmpEQ32x4,  Iop_CmpEQ64x2,
+      Iop_CmpEQ8x16,  Iop_CmpEQ16x8,  Iop_CmpEQ32x4,
       Iop_CmpGT8Sx16, Iop_CmpGT16Sx8, Iop_CmpGT32Sx4, Iop_CmpGT64Sx2,
       Iop_CmpGT8Ux16, Iop_CmpGT16Ux8, Iop_CmpGT32Ux4,
 
