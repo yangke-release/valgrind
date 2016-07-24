@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward
+   Copyright (C) 2000-2010 Julian Seward
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -69,10 +69,11 @@ extern VgVgdb VG_(clo_vgdb);
 /* if > 0, checks every VG_(clo_vgdb_poll) BBS if vgdb wants to be served. */
 extern Int VG_(clo_vgdb_poll);
 /* prefix for the named pipes (FIFOs) used by vgdb/gdb to communicate with valgrind */
-extern HChar* VG_(clo_vgdb_prefix);
+extern Char* VG_(clo_vgdb_prefix);
 /* if True, gdbserver in valgrind will expose a target description containing
    shadow registers */
 extern Bool  VG_(clo_vgdb_shadow_registers);
+#define VG_CLO_VGDB_PREFIX_DEFAULT "/tmp/vgdb-pipe"
 
 /* Enquire about whether to attach to a debugger at errors?   default: NO */
 extern Bool  VG_(clo_db_attach);

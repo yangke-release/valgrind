@@ -9,7 +9,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -95,10 +95,8 @@ void ML_(ppSym) ( Int idx, DiSym* sym )
    vg_assert(sym->pri_name);
    if (sec_names)
       vg_assert(sec_names);
-   VG_(printf)( "%5d:  %c%c %#8lx .. %#8lx (%d)      %s%s",
+   VG_(printf)( "%5d:  %#8lx .. %#8lx (%d)      %s%s",
                 idx,
-                sym->isText ? 'T' : '-',
-                sym->isIFunc ? 'I' : '-',
                 sym->addr, 
                 sym->addr + sym->size - 1, sym->size,
                 sym->pri_name, sec_names ? " " : "" );

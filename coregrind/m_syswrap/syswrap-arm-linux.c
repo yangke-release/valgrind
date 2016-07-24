@@ -7,9 +7,9 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Nicholas Nethercote
+   Copyright (C) 2000-2010 Nicholas Nethercote
       njn@valgrind.org
-   Copyright (C) 2008-2011 Evan Geller
+   Copyright (C) 2008-2010 Evan Geller
       gaze@bea.ms
 
    This program is free software; you can redistribute it and/or
@@ -59,6 +59,11 @@
 #include "priv_syswrap-linux.h"     /* for decls of linux-ish wrappers */
 #include "priv_syswrap-main.h"
 
+Bool addTaintedSocket = False;
+Bool isMap = False;
+
+extern Int listeningSocket;
+extern Int boundSocket;
 
 /* ---------------------------------------------------------------------
    clone() handling
@@ -368,6 +373,10 @@ PRE(sys_socketcall)
       break;
 
    case VKI_SYS_SOCKET:
+      if ((ARG2_1 & 0xff) == 2)
+      {
+        addTaintedSocket = True;
+      }
      /* int socket(int domain, int type, int protocol); */
       PRE_MEM_READ( "socketcall.socket(args)", ARG2, 3*sizeof(Addr) );
       break;
@@ -385,6 +394,7 @@ PRE(sys_socketcall)
       break;
 
    case VKI_SYS_ACCEPT: {
+      addTaintedSocket = True;
      /* int accept(int s, struct sockaddr *addr, int *addrlen); */
       PRE_MEM_READ( "socketcall.accept(args)", ARG2, 3*sizeof(Addr) );
       ML_(generic_PRE_sys_accept)( tid, ARG2_0, ARG2_1, ARG2_2 );
@@ -422,12 +432,13 @@ PRE(sys_socketcall)
          from parameter.
      */
      PRE_MEM_READ( "socketcall.recv(args)", ARG2, 4*sizeof(Addr) );
-     ML_(generic_PRE_sys_recv)( tid, ARG2_0, ARG2_1, ARG2_2 );
+     ML_(generic_PRE_sys_recv)( tid, ARG2_0, ARG2_1, ARG2_2, ARG2_3 );
      break;
 
    case VKI_SYS_CONNECT:
      /* int connect(int sockfd,
    struct sockaddr *serv_addr, int addrlen ); */
+     addTaintedSocket = True;
      PRE_MEM_READ( "socketcall.connect(args)", ARG2, 3*sizeof(Addr) );
      ML_(generic_PRE_sys_connect)( tid, ARG2_0, ARG2_1, ARG2_2 );
      break;
@@ -522,7 +533,7 @@ POST(sys_socketcall)
     break;
 
   case VKI_SYS_SOCKET:
-    r = ML_(generic_POST_sys_socket)( tid, VG_(mk_SysRes_Success)(RES) );
+    r = ML_(generic_POST_sys_socket)( tid, VG_(mk_SysRes_Success)(RES), ARG2_0, ARG2_1, ARG2_2 );
     SET_STATUS_from_SysRes(r);
     break;
 
@@ -533,6 +544,10 @@ POST(sys_socketcall)
 
   case VKI_SYS_LISTEN:
     /* int listen(int s, int backlog); */
+      if (ARG2_0 == boundSocket)
+      {
+        listeningSocket = boundSocket;
+      }
     break;
 
   case VKI_SYS_ACCEPT:
@@ -555,7 +570,7 @@ POST(sys_socketcall)
     break;
 
   case VKI_SYS_RECV:
-    ML_(generic_POST_sys_recv)( tid, RES, ARG2_0, ARG2_1, ARG2_2 );
+    ML_(generic_POST_sys_recv)( tid, RES, ARG2_0, ARG2_1, ARG2_2, ARG2_3 );
     break;
 
   case VKI_SYS_CONNECT:
@@ -607,12 +622,13 @@ PRE(sys_socket)
 {
    PRINT("sys_socket ( %ld, %ld, %ld )",ARG1,ARG2,ARG3);
    PRE_REG_READ3(long, "socket", int, domain, int, type, int, protocol);
+   addTaintedSocket = True;
 }
 POST(sys_socket)
 {
    SysRes r;
    vg_assert(SUCCESS);
-   r = ML_(generic_POST_sys_socket)(tid, VG_(mk_SysRes_Success)(RES));
+   r = ML_(generic_POST_sys_socket)(tid, VG_(mk_SysRes_Success)(RES), ARG1, ARG2, ARG3);
    SET_STATUS_from_SysRes(r);
 }
 
@@ -646,6 +662,7 @@ PRE(sys_connect)
    PRINT("sys_connect ( %ld, %#lx, %ld )",ARG1,ARG2,ARG3);
    PRE_REG_READ3(long, "connect",
                  int, sockfd, struct sockaddr *, serv_addr, int, addrlen);
+   addTaintedSocket = True;
    ML_(generic_PRE_sys_connect)(tid, ARG1,ARG2,ARG3);
 }
 
@@ -655,6 +672,7 @@ PRE(sys_accept)
    PRINT("sys_accept ( %ld, %#lx, %ld )",ARG1,ARG2,ARG3);
    PRE_REG_READ3(long, "accept",
                  int, s, struct sockaddr *, addr, int, *addrlen);
+   addTaintedSocket = True;
    ML_(generic_PRE_sys_accept)(tid, ARG1,ARG2,ARG3);
 }
 POST(sys_accept)
@@ -958,12 +976,12 @@ PRE(sys_recv)
    PRINT("sys_recv ( %ld, %#lx, %ld, %lu )",ARG1,ARG2,ARG3,ARG4);
    PRE_REG_READ4(long, "recv",
                  int, s, void *, buf, int, len, unsigned int, flags);
-   ML_(generic_PRE_sys_recv)( tid, ARG1, ARG2, ARG3 );
+   ML_(generic_PRE_sys_recv)( tid, ARG1, ARG2, ARG3, ARG4 );
 }
 
 POST(sys_recv)
 {
-   ML_(generic_POST_sys_recv)( tid, RES, ARG1, ARG2, ARG3 );
+   ML_(generic_POST_sys_recv)( tid, RES, ARG1, ARG2, ARG3, ARG4 );
 }
 
 PRE(sys_mmap2)
@@ -984,6 +1002,7 @@ PRE(sys_mmap2)
                  unsigned long, prot,  unsigned long, flags,
                  unsigned long, fd,    unsigned long, offset);
 
+   isMap = True;
    r = ML_(generic_PRE_sys_mmap)( tid, ARG1, ARG2, ARG3, ARG4, ARG5, 
                                        4096 * (Off64T)ARG6 );
    SET_STATUS_from_SysRes(r);
@@ -1784,6 +1803,7 @@ static SyscallTableEntry syscall_main_table[] = {
 //   LINX_(__NR_vmsplice,          sys_ni_syscall),       // 316
 //   LINX_(__NR_move_pages,        sys_ni_syscall),       // 317
 //   LINX_(__NR_getcpu,            sys_ni_syscall),       // 318
+//   LINXY(__NR_epoll_pwait,       sys_epoll_pwait),      // 319
 
    LINX_(__NR_utimensat,         sys_utimensat),        // 320
    LINXY(__NR_signalfd,          sys_signalfd),         // 321
@@ -1804,8 +1824,6 @@ static SyscallTableEntry syscall_main_table[] = {
 
    LINX_(__NR_pselect6,          sys_pselect6),         // 335
    LINXY(__NR_ppoll,             sys_ppoll),            // 336
-
-   LINXY(__NR_epoll_pwait,       sys_epoll_pwait),      // 346
 
    LINXY(__NR_signalfd4,         sys_signalfd4),        // 355
    LINX_(__NR_eventfd2,          sys_eventfd2),         // 356

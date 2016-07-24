@@ -8,7 +8,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -120,7 +120,7 @@ static inline void my_exit ( int x )
    __asm__ __volatile__(".word 0xFFFFFFFF");
    while (1) {}
 #  else
-   extern __attribute__ ((__noreturn__)) void _exit(int status);
+   extern void _exit(int status);
    _exit(x);
 #  endif
 }
@@ -1035,7 +1035,7 @@ static void init(void)
 
    init_done = 1;
 
-   VALGRIND_DO_CLIENT_REQUEST_STMT(VG_USERREQ__GET_MALLOCFUNCS, &info,
+   VALGRIND_DO_CLIENT_REQUEST_EXPR(-1, VG_USERREQ__GET_MALLOCFUNCS, &info,
                                    0, 0, 0, 0);
 }
 

@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward
+   Copyright (C) 2000-2010 Julian Seward
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -219,7 +219,7 @@ DECL_TEMPLATE(generic, sys_fstatfs64);             // * (?)
 
 extern void   ML_(generic_PRE_sys_socketpair)   ( TId, UW, UW, UW, UW );
 extern SysRes ML_(generic_POST_sys_socketpair)  ( TId, SR, UW, UW, UW, UW );
-extern SysRes ML_(generic_POST_sys_socket)      ( TId, SR );
+extern SysRes ML_(generic_POST_sys_socket)      ( TId, SR, UW, UW, UW );
 extern void   ML_(generic_PRE_sys_bind)         ( TId, UW, UW, UW );
 extern void   ML_(generic_PRE_sys_accept)       ( TId, UW, UW, UW );
 extern SysRes ML_(generic_POST_sys_accept)      ( TId, SR, UW, UW, UW );
@@ -227,8 +227,8 @@ extern void   ML_(generic_PRE_sys_sendto)       ( TId, UW, UW, UW, UW, UW, UW );
 extern void   ML_(generic_PRE_sys_send)         ( TId, UW, UW, UW );
 extern void   ML_(generic_PRE_sys_recvfrom)     ( TId, UW, UW, UW, UW, UW, UW );
 extern void   ML_(generic_POST_sys_recvfrom)    ( TId, SR, UW, UW, UW, UW, UW, UW );
-extern void   ML_(generic_PRE_sys_recv)         ( TId, UW, UW, UW );
-extern void   ML_(generic_POST_sys_recv)        ( TId, UW, UW, UW, UW );
+extern void   ML_(generic_PRE_sys_recv)         ( TId, UW, UW, UW, UW );
+extern void   ML_(generic_POST_sys_recv)        ( TId, UW, UW, UW, UW, UW );
 extern void   ML_(generic_PRE_sys_connect)      ( TId, UW, UW, UW );
 extern void   ML_(generic_PRE_sys_setsockopt)   ( TId, UW, UW, UW, UW, UW );
 extern void   ML_(generic_PRE_sys_getsockname)  ( TId, UW, UW, UW );

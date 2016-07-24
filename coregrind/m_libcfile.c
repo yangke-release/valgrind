@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -340,6 +340,11 @@ Bool VG_(is_dir) ( const HChar* f )
                       : VKI_S_ISDIR(buf.mode) ? True : False;
 }
 
+SysRes VG_(alarm)  ( UInt seconds)
+{
+   return VG_(do_syscall1)(__NR_alarm, (UWord)seconds);
+}
+
 SysRes VG_(dup) ( Int oldfd )
 {
    return VG_(do_syscall1)(__NR_dup, oldfd);
@@ -601,18 +606,6 @@ SysRes VG_(pread) ( Int fd, void* buf, Int count, OffT offset )
 #  endif
 }
 
-/* Return the name of a directory for temporary files. */
-const HChar *VG_(tmpdir)(void)
-{
-   const HChar *tmpdir;
-
-   tmpdir = VG_(getenv)("TMPDIR");
-   if (tmpdir == NULL || *tmpdir == '\0') tmpdir = VG_TMPDIR;
-   if (tmpdir == NULL || *tmpdir == '\0') tmpdir = "/tmp";    /* fallback */
-
-   return tmpdir;
-}
-
 /* Create and open (-rw------) a tmp file name incorporating said arg.
    Returns -1 on failure, else the fd of the file.  If fullname is
    non-NULL, the file's name is written into it.  The number of bytes
@@ -633,7 +626,9 @@ Int VG_(mkstemp) ( HChar* part_of_name, /*OUT*/HChar* fullname )
    seed = (VG_(getpid)() << 9) ^ VG_(getppid)();
 
    /* Determine sensible location for temporary files */
-   tmpdir = VG_(tmpdir)();
+   tmpdir = VG_(getenv)("TMPDIR");
+   if (tmpdir == NULL || *tmpdir == '\0') tmpdir = VG_TMPDIR;
+   if (tmpdir == NULL || *tmpdir == '\0') tmpdir = "/tmp";    /* fallback */
 
    tries = 0;
    while (True) {

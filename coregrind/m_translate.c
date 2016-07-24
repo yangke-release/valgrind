@@ -8,7 +8,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -71,7 +71,7 @@ static UInt n_SP_updates_generic_unknown = 0;
 
 void VG_(print_translation_stats) ( void )
 {
-   Char buf[7];
+   Char buf[6];
    UInt n_SP_updates = n_SP_updates_fast + n_SP_updates_generic_known
                                          + n_SP_updates_generic_unknown;
    VG_(percentify)(n_SP_updates_fast, n_SP_updates, 1, 6, buf);
@@ -1337,21 +1337,12 @@ Bool VG_(translate) ( ThreadId tid,
 
    /* If doing any code printing, print a basic block start marker */
    if (VG_(clo_trace_flags) || debugging_translation) {
-      Char fnname[64] = "UNKNOWN_FUNCTION";
+      Char fnname[64] = "";
       VG_(get_fnname_w_offset)(addr, fnname, 64);
-      const UChar* objname = "UNKNOWN_OBJECT";
-      OffT         objoff  = 0;
-      DebugInfo*   di      = VG_(find_DebugInfo)( addr );
-      if (di) {
-         objname = VG_(DebugInfo_get_filename)(di);
-         objoff  = addr - VG_(DebugInfo_get_text_bias)(di);
-      }
-      vg_assert(objname);
       VG_(printf)(
-         "==== SB %d (exec'd %lld) [tid %d] 0x%llx %s %s+0x%llx\n",
-         VG_(get_bbs_translated)(), bbs_done, (Int)tid, addr,
-         fnname, objname, (ULong)objoff
-      );
+              "==== SB %d [tid %d] %s(0x%llx) SBs exec'd %lld ====\n",
+              VG_(get_bbs_translated)(), (Int)tid, fnname, addr, 
+              bbs_done);
    }
 
    /* Are we allowed to translate here? */

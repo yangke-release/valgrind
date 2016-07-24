@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -157,6 +157,17 @@ UInt VG_(vprintf_xml) ( const HChar *format, va_list vargs )
 }
 
 UInt VG_(printf_xml) ( const HChar *format, ... )
+{
+   UInt ret;
+   va_list vargs;
+   va_start(vargs, format);
+   ret = VG_(vprintf_xml)(format, vargs);
+   va_end(vargs);
+   return ret;
+}
+
+/* An exact clone of VG_(printf_xml), unfortunately. */
+UInt VG_(printf_xml_no_f_c) ( const HChar *format, ... )
 {
    UInt ret;
    va_list vargs;
@@ -486,6 +497,17 @@ UInt VG_(vmessage) ( VgMsgKind kind, const HChar* format, va_list vargs )
    }
 
    return ret;
+}
+
+/* Send a simple single-part XML message. */
+UInt VG_(message_no_f_c) ( VgMsgKind kind, const HChar* format, ... )
+{
+   UInt count;
+   va_list vargs;
+   va_start(vargs,format);
+   count = VG_(vmessage) ( kind, format, vargs );
+   va_end(vargs);
+   return count;
 }
 
 /* Send a simple single-part message. */

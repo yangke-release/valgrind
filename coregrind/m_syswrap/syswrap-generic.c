@@ -8,7 +8,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -59,6 +59,7 @@
 #include "pub_core_syscall.h"
 #include "pub_core_syswrap.h"
 #include "pub_core_tooliface.h"
+#include "pub_core_hashtable.h"
 #include "pub_core_ume.h"
 
 #include "priv_types_n_macros.h"
@@ -66,8 +67,28 @@
 
 #include "config.h"
 
+#include <avalanche.h>
 
-/* Returns True iff address range is something the client can
+VgHashTable fds = NULL;
+VgHashTable inputfiles = NULL;
+HChar* curfile;
+Int cursocket = -1;
+Int curfilenum = -1;
+Int boundSocket = -1;
+Int listeningSocket = -1;
+ULong curoffs;
+ULong cursize;
+Bool caughtOpen = False;
+Bool curDeclared = True;
+Bool sockets = False;
+Bool datagrams = False;
+Bool isRecv = False;
+Int socketsNum = 0;
+UShort port;
+UChar ip1, ip2, ip3, ip4;
+
+
+/* Returns True if address range is something the client can
    plausibly mess with: all of it is either already belongs to the
    client or is free or a reservation. */
 
@@ -1258,10 +1279,40 @@ ML_(generic_POST_sys_socketpair) ( ThreadId tid,
 /* ------ */
 
 SysRes 
-ML_(generic_POST_sys_socket) ( ThreadId tid, SysRes res )
+ML_(generic_POST_sys_socket) ( ThreadId tid, SysRes res, UWord arg0, UWord arg1, UWord arg2 )
 {
    SysRes r = res;
    vg_assert(!sr_isError(res)); /* guaranteed by caller */
+
+   //SOCK_DGRAM = 2
+   if (datagrams && ((arg1 & 0xff) == 2))
+   {
+     if (fds == NULL) 
+     {
+       fds = VG_(HT_construct)("fds");
+     }
+     fdsNode* node = VG_(HT_lookup)(fds, sr_Res(res));
+     if (node == NULL)
+     {
+       node = VG_(malloc)("fdsNode", sizeof(fdsNode));
+       node->key = sr_Res(res);
+       node->seqnum = socketsNum++;
+       node->name = NULL;
+       node->offs = 0;
+       VG_(HT_add_node)(fds, node);
+     }
+     else
+     {
+       node->name = NULL;
+       node->offs = 0;
+     }
+     cursocket = node->seqnum;
+   }
+   else
+   {
+     cursocket = -1;
+   }
+
    if (!ML_(fd_allowed)(sr_Res(res), "socket", tid, True)) {
       VG_(close)(sr_Res(res));
       r = VG_(mk_SysRes_Error)( VKI_EMFILE );
@@ -1280,6 +1331,25 @@ ML_(generic_PRE_sys_bind) ( ThreadId tid,
 {
    /* int bind(int sockfd, struct sockaddr *my_addr, 
                int addrlen); */
+
+   UChar* buf = (UChar*) arg1;
+   if (arg2 == 0x10)
+   {
+     UChar* buf = (UChar*) arg1;
+     UChar addr_family = buf[0];
+     UShort addr_port = (((UShort) buf[2]) << 8) ^ buf[3];
+     UChar addr_ip1 = buf[4];
+     UChar addr_ip2 = buf[5];
+     UChar addr_ip3 = buf[6];
+     UChar addr_ip4 = buf[7];
+     if ((addr_family == 2) && (addr_port == port) && 
+         (addr_ip1 == ip1) && (addr_ip2 == ip2) &&
+         (addr_ip3 == ip3) && (addr_ip4 == ip4))
+     {
+       boundSocket = arg0;
+     }
+   }
+
    pre_mem_read_sockaddr( 
       tid, "socketcall.bind(my_addr.%s)",
       (struct vki_sockaddr *) arg1, arg2 
@@ -1308,6 +1378,36 @@ ML_(generic_POST_sys_accept) ( ThreadId tid,
 {
    SysRes r = res;
    vg_assert(!sr_isError(res)); /* guaranteed by caller */
+
+   if (fds == NULL) 
+   {
+     fds = VG_(HT_construct)("fds");
+   }
+   if (sockets && (arg0 == listeningSocket))
+   {
+     fdsNode* node = VG_(HT_lookup)(fds, sr_Res(res));
+     if (node == NULL)
+     {
+       node = VG_(malloc)("fdsNode", sizeof(fdsNode));
+       node->key = sr_Res(res);
+       node->seqnum = socketsNum++;
+       node->name = NULL;
+       node->offs = 0;
+       VG_(HT_add_node)(fds, node);
+     }
+     else
+     {
+       node->name = NULL;
+       node->offs = 0;
+     }
+     cursocket = node->seqnum;
+   }
+   else
+   {
+     cursocket = -1;
+   }
+
+
    if (!ML_(fd_allowed)(sr_Res(res), "accept", tid, True)) {
       VG_(close)(sr_Res(res));
       r = VG_(mk_SysRes_Error)( VKI_EMFILE );
@@ -1387,18 +1487,47 @@ ML_(generic_POST_sys_recvfrom) ( ThreadId tid,
    Addr fromlen_p  = arg5;
 
    vg_assert(!sr_isError(res)); /* guaranteed by caller */
+
+   if ((fds != NULL) && (datagrams || sockets))
+   {
+     fdsNode* node = VG_(HT_lookup)(fds, arg0);
+     if (node != NULL)
+     {
+       cursocket = node->seqnum;
+       curoffs = node->offs;
+       //MSG_PEEK = 0x02
+       if ((arg3 & 0x02) == 0)
+       {
+         node->offs = node->offs + sr_Res(res);
+       }
+     }
+     else
+     {
+       cursocket = -1;
+     }
+   }
+   else
+   {
+     cursocket = -1;
+   }
+
    if (from_p != (Addr)NULL) 
       ML_(buf_and_len_post_check) ( tid, res, from_p, fromlen_p,
                                     "socketcall.recvfrom(fromlen_out)" );
-   POST_MEM_WRITE( buf_p, len );
+   isRecv = True;
+   if (sr_Res(res) > 0 && arg1 != 0) {
+     POST_MEM_WRITE( buf_p, sr_Res(res) );
+   }
+   isRecv = False;
 }
 
 /* ------ */
 
 void 
 ML_(generic_PRE_sys_recv) ( ThreadId tid,
-                            UWord arg0, UWord arg1, UWord arg2 )
+                            UWord arg0, UWord arg1, UWord arg2, UWord arg3 )
 {
+   cursocket = -1;
    /* int recv(int s, void *buf, int len, unsigned int flags); */
    /* man 2 recv says:
       The  recv call is normally used only on a connected socket
@@ -1413,12 +1542,36 @@ ML_(generic_PRE_sys_recv) ( ThreadId tid,
 void 
 ML_(generic_POST_sys_recv) ( ThreadId tid, 
                              UWord res,
-                             UWord arg0, UWord arg1, UWord arg2 )
+                             UWord arg0, UWord arg1, UWord arg2, UWord arg3  )
 {
+   if ((fds != NULL) && (sockets || datagrams))
+   {
+     fdsNode* node = VG_(HT_lookup)(fds, arg0);
+     if (node != NULL)
+     {
+       cursocket = node->seqnum;
+       curoffs = node->offs;
+       //MSG_PEEK = 0x02
+       if ((arg3 & 0x02) == 0)
+       {
+         node->offs = node->offs + res;
+       }
+     }
+     else
+     {
+       cursocket = -1;
+     }
+   }
+   else
+   {
+     cursocket = -1;
+   }
+   isRecv = True;
    if (res >= 0 && arg1 != 0) {
       POST_MEM_WRITE( arg1, /* buf */
                       arg2  /* len */ );
    }
+   isRecv = False;
 }
 
 /* ------ */
@@ -1432,6 +1585,57 @@ ML_(generic_PRE_sys_connect) ( ThreadId tid,
    pre_mem_read_sockaddr( tid,
                           "socketcall.connect(serv_addr.%s)",
                           (struct vki_sockaddr *) arg1, arg2);
+   UChar* buf = (UChar*) arg1;
+   if (arg2 == 0x10)
+   {
+     UChar* buf = (UChar*) arg1;
+     UChar addr_family = buf[0];
+     UShort addr_port = (((UShort) buf[2]) << 8) ^ buf[3];
+     UChar addr_ip1 = buf[4];
+     UChar addr_ip2 = buf[5];
+     UChar addr_ip3 = buf[6];
+     UChar addr_ip4 = buf[7];
+     if ((addr_family == 2) && (addr_port == port) && 
+         (addr_ip1 == ip1) && (addr_ip2 == ip2) &&
+         (addr_ip3 == ip3) && (addr_ip4 == ip4))
+     {
+       if (fds == NULL) 
+       {
+         fds = VG_(HT_construct)("fds");
+       }
+       if (sockets)
+       {
+         fdsNode* node = VG_(HT_lookup)(fds, arg0);
+         if (node == NULL)
+         {
+           node = VG_(malloc)("fdsNode", sizeof(fdsNode));
+           node->key = arg0;
+           node->seqnum = socketsNum++;
+           node->name = NULL;
+           node->offs = 0;
+           VG_(HT_add_node)(fds, node);
+         }
+         else
+         {
+           node->name = NULL;
+           node->offs = 0;
+         }
+         cursocket = node->seqnum;
+       }
+       else
+       {
+         cursocket = -1;
+       }
+     }
+     else
+     {
+       cursocket = -1;
+     }
+   }
+   else
+   {
+     cursocket = -1;
+   } 
 }
 
 /* ------ */
@@ -1981,6 +2185,29 @@ ML_(generic_PRE_sys_mmap) ( ThreadId tid,
    MapRequest mreq;
    Bool       mreq_ok;
 
+/*   if (fds != NULL)
+   {
+     fdsNode* node = VG_(HT_lookup)(fds, arg5);
+     if (node != NULL)
+     {
+       curfile = node->name;
+       cursize = node->size;
+       curoffs = arg6;
+       curfilenum = node->seqnum;
+     }
+     else
+     {
+       curfile = NULL;
+       curfilenum = -1;
+     }
+   }
+   else
+   {
+     curfile = NULL;
+     curfilenum = -1;
+   }*/
+
+
 #if defined(VGO_darwin)
    // Nb: we can't use this on Darwin, it has races:
    // * needs to RETRY if advisory succeeds but map fails  
@@ -2070,7 +2297,7 @@ ML_(generic_PRE_sys_mmap) ( ThreadId tid,
       );
       /* Load symbols? */
       di_handle = VG_(di_notify_mmap)( (Addr)sr_Res(sres), 
-                                       False/*allow_SkFileV*/, (Int)arg5 );
+                                       False/*allow_SkFileV*/ );
       /* Notify the tool. */
       notify_tool_of_mmap(
          (Addr)sr_Res(sres), /* addr kernel actually assigned */
@@ -2900,6 +3127,15 @@ PRE(sys_close)
 
 POST(sys_close)
 {
+   if ((fds != NULL) && (VG_(HT_lookup)(fds, ARG1) != NULL))
+   {
+      VG_(HT_remove)(fds, ARG1);
+      curfile = NULL;
+      curfilenum = -1;
+      cursocket = -1;
+      cursize = 0;
+      curoffs = 0;
+   }
    if (VG_(clo_track_fds)) record_fd_close(ARG1);
 }
 
@@ -3601,6 +3837,8 @@ POST(sys_nanosleep)
 
 PRE(sys_open)
 {
+   curfile = NULL;
+   curfilenum = -1;
    if (ARG2 & VKI_O_CREAT) {
       // 3-arg version
       PRINT("sys_open ( %#lx(%s), %ld, %ld )",ARG1,(char*)ARG1,ARG2,ARG3);
@@ -3645,9 +3883,144 @@ PRE(sys_open)
    *flags |= SfMayBlock;
 }
 
+HWord hashCode(Char* str)
+{
+  HWord hash = 5381;
+  Int i = 0;
+  while (str[i] != '\0')
+  {
+    hash = ((hash << 5) + hash) + str[i]; /* hash * 33 + c */
+    i++;
+  }
+  return hash;
+}
+
 POST(sys_open)
 {
    vg_assert(SUCCESS);
+   if (fds == NULL) 
+   {
+     fds = VG_(HT_construct)("fds");
+   }
+   HWord key = hashCode((Char*) ARG1);
+   stringNode* sn = NULL;
+   if (inputfiles != NULL)
+   {
+     sn = VG_(HT_lookup)(inputfiles, key);
+   }
+   if (sn != NULL)
+   {
+     while ((sn != NULL) && (sn->key == key) && VG_(strcmp)(sn->filename, (Char*) ARG1))
+     {
+       sn = sn->next;
+     }
+     if ((sn != NULL) && (sn->key != key))
+     {
+       sn = NULL;
+     }
+   }
+   if (sn != NULL)
+   {
+     caughtOpen = True;
+     fdsNode* node = VG_(HT_lookup)(fds, RES);
+     Char* name;
+     Int i = 0;
+     Int j = 0;
+     while (((Char*) ARG1)[i] != '\0')
+     {
+       if (((Char*) ARG1)[i] == '.')
+       {
+         j += 5;
+       }
+       else if (((Char*) ARG1)[i] == '/')
+       {
+         j += 7;
+       }
+       else if (((Char*) ARG1)[i] == '-')
+       {
+         j += 8;
+       }
+       else 
+       {
+         j++;
+       }
+       i++;
+     }
+     name = VG_(malloc)("name", j + 1);
+     i = 0;
+     j = 0;
+     while (((Char*) ARG1)[i] != '\0')
+     {
+       if (((Char*) ARG1)[i] == '.')
+       {
+         name[j] = '_';
+         name[j + 1] = 'd';
+         name[j + 2] = 'o';
+         name[j + 3] = 't';
+         name[j + 4] = '_';
+         j += 5;
+       }
+       else if (((Char*) ARG1)[i] == '/')
+       {
+         name[j] = '_';
+         name[j + 1] = 's';
+         name[j + 2] = 'l';
+         name[j + 3] = 'a';
+         name[j + 4] = 's';
+         name[j + 5] = 'h';
+         name[j + 6] = '_';
+         j += 7;
+       }
+       else if (((Char*) ARG1)[i] == '-')
+       {
+         name[j] = '_';
+         name[j + 1] = 'h';
+         name[j + 2] = 'y';
+         name[j + 3] = 'p';
+         name[j + 4] = 'h';
+         name[j + 5] = 'e';
+         name[j + 6] = 'n';
+         name[j + 7] = '_';
+         j += 8;
+       }
+       else 
+       {
+         name[j] = ((Char*) ARG1)[i];
+         j++;
+       }
+       i++;
+     }
+     name[j] = '\0';
+     if (node == NULL)
+     {
+       node = VG_(malloc)("fdsNode", sizeof(fdsNode));
+       node->key = RES;
+       node->name = name;
+       node->offs = 0;
+       node->seqnum = sn->filenum;
+       VG_(HT_add_node)(fds, node);
+     }
+     else
+     {
+       node->name = name;
+       node->offs = 0;
+     }
+     curDeclared = sn->declared;
+     if (!sn->declared)
+     {
+       sn->declared = True;
+     }
+     struct vg_stat fileInfo;
+     VG_(fstat)(RES,  &fileInfo);
+     node->size = fileInfo.size; 
+     curfile = node->name;
+     curfilenum = node->seqnum;
+   }
+   else
+   {
+     curfile = NULL;
+     curfilenum = -1;
+   }
    if (!ML_(fd_allowed)(RES, "open", tid, True)) {
       VG_(close)(RES);
       SET_STATUS_Failure( VKI_EMFILE );
@@ -3659,7 +4032,30 @@ POST(sys_open)
 
 PRE(sys_read)
 {
+   cursocket = -1;
    *flags |= SfMayBlock;
+   if ((fds != NULL) && caughtOpen)
+   {
+     fdsNode* node = VG_(HT_lookup)(fds, ARG1);
+     if (node != NULL)
+     {
+       curfile = node->name;
+       curoffs = node->offs;
+       cursize = node->size;
+       curfilenum = node->seqnum;
+       node->offs = node->offs + (ULong) ARG3 < cursize ? node->offs + (ULong) ARG3 : cursize;
+     }
+     else
+     {
+       curfile = NULL;
+       curfilenum = -1;
+     }
+   }
+   else
+   {
+     curfile = NULL;
+     curfilenum = -1;
+   }
    PRINT("sys_read ( %ld, %#lx, %llu )", ARG1, ARG2, (ULong)ARG3);
    PRE_REG_READ3(ssize_t, "read",
                  unsigned int, fd, char *, buf, vki_size_t, count);
@@ -3672,6 +4068,24 @@ PRE(sys_read)
 
 POST(sys_read)
 {
+   if ((fds != NULL) && (sockets || datagrams))
+   {
+     fdsNode* node = VG_(HT_lookup)(fds, ARG1);
+     if (node != NULL)
+     {
+       cursocket = node->seqnum;
+       curoffs = node->offs;
+       node->offs = node->offs + RES;
+     }
+     else
+     {
+       cursocket = -1;
+     }
+   }
+   else
+   {
+     cursocket = -1;
+   }
    vg_assert(SUCCESS);
    POST_MEM_WRITE( ARG2, RES );
 }

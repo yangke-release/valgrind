@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Nicholas Nethercote
+   Copyright (C) 2000-2010 Nicholas Nethercote
       njn@valgrind.org
 
    This program is free software; you can redistribute it and/or
@@ -55,6 +55,7 @@
 #include "pub_core_syscall.h"
 #include "pub_core_syswrap.h"
 #include "pub_core_tooliface.h"
+#include "pub_core_hashtable.h"
 #include "pub_core_stacks.h"        // VG_(register_stack)
 
 #include "priv_types_n_macros.h"
@@ -63,6 +64,16 @@
 #include "priv_syswrap-linux-variants.h" /* decls of linux variant wrappers */
 #include "priv_syswrap-main.h"
 
+#include <avalanche.h>
+
+Bool addTaintedSocket = False;
+Bool isMap = False;
+
+extern VgHashTable fds;
+extern Int cursocket;
+extern Int socketsNum;
+extern Int listeningSocket;
+extern Int boundSocket;
 
 /* ---------------------------------------------------------------------
    clone() handling
@@ -1355,6 +1366,7 @@ PRE(old_mmap)
    PRINT("old_mmap ( %#lx, %llu, %ld, %ld, %ld, %ld )",
          a1, (ULong)a2, a3, a4, a5, a6 );
 
+   isMap = True;
    r = ML_(generic_PRE_sys_mmap)( tid, a1, a2, a3, a4, a5, (Off64T)a6 );
    SET_STATUS_from_SysRes(r);
 }
@@ -1377,6 +1389,7 @@ PRE(sys_mmap2)
                  unsigned long, prot,  unsigned long, flags,
                  unsigned long, fd,    unsigned long, offset);
 
+   isMap = True;
    r = ML_(generic_PRE_sys_mmap)( tid, ARG1, ARG2, ARG3, ARG4, ARG5, 
                                        4096 * (Off64T)ARG6 );
    SET_STATUS_from_SysRes(r);
@@ -1466,6 +1479,11 @@ PRE(sys_socketcall)
 
    case VKI_SYS_SOCKET:
       /* int socket(int domain, int type, int protocol); */
+      //SOCK_DGRAM = 2
+      if ((ARG2_1 & 0xff) == 2)
+      {
+        addTaintedSocket = True;
+      }
       PRE_MEM_READ( "socketcall.socket(args)", ARG2, 3*sizeof(Addr) );
       break;
 
@@ -1482,6 +1500,7 @@ PRE(sys_socketcall)
       break;
 
    case VKI_SYS_ACCEPT: {
+      addTaintedSocket = True;
       /* int accept(int s, struct sockaddr *addr, int *addrlen); */
       PRE_MEM_READ( "socketcall.accept(args)", ARG2, 3*sizeof(Addr) );
       ML_(generic_PRE_sys_accept)( tid, ARG2_0, ARG2_1, ARG2_2 );
@@ -1526,12 +1545,13 @@ PRE(sys_socketcall)
          from parameter.
       */
       PRE_MEM_READ( "socketcall.recv(args)", ARG2, 4*sizeof(Addr) );
-      ML_(generic_PRE_sys_recv)( tid, ARG2_0, ARG2_1, ARG2_2 );
+      ML_(generic_PRE_sys_recv)( tid, ARG2_0, ARG2_1, ARG2_2, ARG2_3 );
       break;
 
    case VKI_SYS_CONNECT:
       /* int connect(int sockfd, 
                      struct sockaddr *serv_addr, int addrlen ); */
+      addTaintedSocket = True;
       PRE_MEM_READ( "socketcall.connect(args)", ARG2, 3*sizeof(Addr) );
       ML_(generic_PRE_sys_connect)( tid, ARG2_0, ARG2_1, ARG2_2 );
       break;
@@ -1626,7 +1646,7 @@ POST(sys_socketcall)
       break;
 
    case VKI_SYS_SOCKET:
-      r = ML_(generic_POST_sys_socket)( tid, VG_(mk_SysRes_Success)(RES) );
+      r = ML_(generic_POST_sys_socket)( tid, VG_(mk_SysRes_Success)(RES), ARG2_0, ARG2_1, ARG2_2);
       SET_STATUS_from_SysRes(r);
       break;
 
@@ -1637,6 +1657,10 @@ POST(sys_socketcall)
                
    case VKI_SYS_LISTEN:
       /* int listen(int s, int backlog); */
+      if (ARG2_0 == boundSocket)
+      {
+        listeningSocket = boundSocket;
+      }
       break;
 
    case VKI_SYS_ACCEPT:
@@ -1661,7 +1685,7 @@ POST(sys_socketcall)
       break;
 
    case VKI_SYS_RECV:
-      ML_(generic_POST_sys_recv)( tid, RES, ARG2_0, ARG2_1, ARG2_2 );
+      ML_(generic_POST_sys_recv)( tid, RES, ARG2_0, ARG2_1, ARG2_2, ARG2_3 );
       break;
 
    case VKI_SYS_CONNECT:

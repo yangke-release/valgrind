@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Nicholas Nethercote
+   Copyright (C) 2000-2010 Nicholas Nethercote
       njn@valgrind.org
 
    This program is free software; you can redistribute it and/or
@@ -54,7 +54,7 @@ VgVgdb VG_(clo_vgdb)           = Vg_VgdbYes;
 #endif
 Int    VG_(clo_vgdb_poll)      = 5000; 
 Int    VG_(clo_vgdb_error)     = 999999999;
-HChar* VG_(clo_vgdb_prefix)    = NULL;
+Char*  VG_(clo_vgdb_prefix)    = VG_CLO_VGDB_PREFIX_DEFAULT;
 Bool   VG_(clo_vgdb_shadow_registers) = False;
 
 Bool   VG_(clo_db_attach)      = False;

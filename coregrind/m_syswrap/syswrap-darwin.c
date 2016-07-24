@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2005-2011 Apple Inc.
+   Copyright (C) 2005-2010 Apple Inc.
       Greg Parker  gparker@apple.com
 
    This program is free software; you can redistribute it and/or
@@ -3550,8 +3550,7 @@ POST(mmap)
    if (RES != -1) {
       ML_(notify_core_and_tool_of_mmap)(RES, ARG2, ARG3, ARG4, ARG5, ARG6);
       // Try to load symbols from the region
-      VG_(di_notify_mmap)( (Addr)RES, False/*allow_SkFileV*/,
-                           -1/*don't use_fd*/ );
+      VG_(di_notify_mmap)( (Addr)RES, False/*allow_SkFileV*/ );
    }
 }
 
@@ -7732,7 +7731,7 @@ POST(getaudit_addr)
 
 PRE(psynch_mutexwait)
 {
-   PRINT("psynch_mutexwait(BOGUS)");
+   PRINT("psynch_mutexwait(BOGUS)\n");
    *flags |= SfMayBlock;
 }
 POST(psynch_mutexwait)
@@ -7741,7 +7740,7 @@ POST(psynch_mutexwait)
 
 PRE(psynch_mutexdrop)
 {
-   PRINT("psynch_mutexdrop(BOGUS)");
+   PRINT("psynch_mutexdrop(BOGUS)\n");
    *flags |= SfMayBlock;
 }
 POST(psynch_mutexdrop)
@@ -7750,7 +7749,8 @@ POST(psynch_mutexdrop)
 
 PRE(psynch_cvbroad)
 {
-   PRINT("psynch_cvbroad(BOGUS)");
+   PRINT("psynch_cvbroad(BOGUS)\n");
+   *flags |= SfMayBlock;
 }
 POST(psynch_cvbroad)
 {
@@ -7758,7 +7758,8 @@ POST(psynch_cvbroad)
 
 PRE(psynch_cvsignal)
 {
-   PRINT("psynch_cvsignal(BOGUS)");
+   PRINT("psynch_cvsignal(BOGUS)\n");
+   *flags |= SfMayBlock;
 }
 POST(psynch_cvsignal)
 {
@@ -7766,7 +7767,7 @@ POST(psynch_cvsignal)
 
 PRE(psynch_cvwait)
 {
-   PRINT("psynch_cvwait(BOGUS)");
+   PRINT("psynch_cvwait(BOGUS)\n");
    *flags |= SfMayBlock;
 }
 POST(psynch_cvwait)
@@ -7775,7 +7776,7 @@ POST(psynch_cvwait)
 
 PRE(psynch_rw_rdlock)
 {
-   PRINT("psynch_rw_rdlock(BOGUS)");
+   PRINT("psynch_rw_rdlock(BOGUS)\n");
    *flags |= SfMayBlock;
 }
 POST(psynch_rw_rdlock)
@@ -7784,7 +7785,7 @@ POST(psynch_rw_rdlock)
 
 PRE(psynch_rw_wrlock)
 {
-   PRINT("psynch_rw_wrlock(BOGUS)");
+   PRINT("psynch_rw_wrlock(BOGUS)\n");
    *flags |= SfMayBlock;
 }
 POST(psynch_rw_wrlock)
@@ -7793,7 +7794,8 @@ POST(psynch_rw_wrlock)
 
 PRE(psynch_rw_unlock)
 {
-   PRINT("psynch_rw_unlock(BOGUS)");
+   PRINT("psynch_rw_unlock(BOGUS)\n");
+   *flags |= SfMayBlock;
 }
 POST(psynch_rw_unlock)
 {
@@ -7801,7 +7803,7 @@ POST(psynch_rw_unlock)
 
 PRE(psynch_cvclrprepost)
 {
-   PRINT("psynch_cvclrprepost(BOGUS)");
+   PRINT("psynch_cvclrprepost(BOGUS)\n");
    *flags |= SfMayBlock;
 }
 POST(psynch_cvclrprepost)

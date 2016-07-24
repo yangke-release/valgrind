@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -55,13 +55,6 @@
 #include "pub_core_vkiscnums.h"  /* for syscall numbers */
 #include "pub_core_debuglog.h"   /* our own iface */
 #include "valgrind.h"            /* for RUNNING_ON_VALGRIND */
-
-static Bool clo_xml;
-
-void VG_(debugLog_setXml)(Bool xml)
-{
-   clo_xml = xml;
-}
 
 /*------------------------------------------------------------*/
 /*--- Stuff to make us completely independent.             ---*/
@@ -728,34 +721,12 @@ VG_(debugLog_vprintf) (
                ret += myvprintf_int64(send, send_arg2, flags, 10, width, False,
                                       (ULong)(va_arg (vargs, UInt)));
             break;
-         case 'p':
-            if (format[i+1] == 'S') {
-               i++;
-               /* %pS, like %s but escaping chars for XML safety */
-               /* Note: simplistic; ignores field width and flags */
-               char *str = va_arg (vargs, char *);
-               if (str == (char*) 0)
-                  str = "(null)";
-               ret += myvprintf_str_XML_simplistic(send, send_arg2, str);
-            } else if (format[i+1] == 's') {
-               i++;
-               /* %ps, synonym for %s with --xml=no / %pS with --xml=yes */
-               char *str = va_arg (vargs, char *);
-               if (str == (char*) 0)
-                  str = "(null)";
-               if (clo_xml)
-                  ret += myvprintf_str_XML_simplistic(send, send_arg2, str);
-               else
-                  ret += myvprintf_str(send, send_arg2, flags, width, str,
-                                       False);
-            } else {
-               /* %p */
-               ret += 2;
-               send('0',send_arg2);
-               send('x',send_arg2);
-               ret += myvprintf_int64(send, send_arg2, flags, 16, width, True,
-                                      (ULong)((UWord)va_arg (vargs, void *)));
-            }
+         case 'p': /* %p */
+            ret += 2;
+            send('0',send_arg2);
+            send('x',send_arg2);
+            ret += myvprintf_int64(send, send_arg2, flags, 16, width, True,
+                                   (ULong)((UWord)va_arg (vargs, void *)));
             break;
          case 'x': /* %x */
          case 'X': /* %X */
@@ -781,6 +752,13 @@ VG_(debugLog_vprintf) (
             if (str == (char*) 0) str = "(null)";
             ret += myvprintf_str(send, send_arg2, 
                                  flags, width, str, format[i]=='S');
+            break;
+         }
+         case 't': { /* %t, like %s but escaping chars for XML safety */
+            /* Note: simplistic; ignores field width and flags */
+            char *str = va_arg (vargs, char *);
+            if (str == (char*) 0) str = "(null)";
+            ret += myvprintf_str_XML_simplistic(send, send_arg2, str);
             break;
          }
 

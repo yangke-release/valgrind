@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2007-2011 OpenWorks LLP
+   Copyright (C) 2007-2010 OpenWorks LLP
       info@open-works.co.uk
 
    This program is free software; you can redistribute it and/or
@@ -330,6 +330,15 @@ static void add_char_to_XA ( HChar c, void* opaque )
 }
 
 void VG_(xaprintf)( XArray* dst, const HChar* format, ... )
+{
+   va_list vargs;
+   va_start(vargs, format);
+   VG_(vcbprintf)( add_char_to_XA, (void*)dst, format, vargs );
+   va_end(vargs);
+}
+
+/* and again .. */
+void VG_(xaprintf_no_f_c)( XArray* dst, const HChar* format, ... )
 {
    va_list vargs;
    va_start(vargs, format);

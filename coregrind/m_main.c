@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -100,10 +100,8 @@ static void print_all_stats ( void )
 
 static void usage_NORETURN ( Bool debug_help )
 {
-   /* 'usage1' contains a %s 
-      - for the name of the GDB executable
-      - for the name of vgdb's path prefix
-      which must be supplied when they are VG_(printf)'d. */
+   /* 'usage1' contains a %s for the name of the GDB executable, which
+      must be supplied when it is VG_(printf)'d. */
    Char* usage1 = 
 "usage: valgrind [options] prog-and-args\n"
 "\n"
@@ -244,8 +242,8 @@ static void usage_NORETURN ( Bool debug_help )
 "  Extra options read from ~/.valgrindrc, $VALGRIND_OPTS, ./.valgrindrc\n"
 "\n"
 "  %s is %s\n"
-"  Valgrind is Copyright (C) 2000-2011, and GNU GPL'd, by Julian Seward et al.\n"
-"  LibVEX is Copyright (C) 2004-2011, and GNU GPL'd, by OpenWorks LLP et al.\n"
+"  Valgrind is Copyright (C) 2000-2010, and GNU GPL'd, by Julian Seward et al.\n"
+"  LibVEX is Copyright (C) 2004-2010, and GNU GPL'd, by OpenWorks LLP et al.\n"
 "\n"
 "  Bug reports, feedback, admiration, abuse, etc, to: %s.\n"
 "\n";
@@ -259,7 +257,7 @@ static void usage_NORETURN ( Bool debug_help )
    /* 'usage1' expects two int, two char* argument, and one SizeT argument. */
    VG_(printf)(usage1, 
                VG_(clo_vgdb_error), gdb_path, VG_MIN_MALLOC_SZB,
-               VG_(clo_vgdb_poll), VG_(vgdb_prefix_default)()); 
+               VG_(clo_vgdb_poll), VG_(clo_vgdb_prefix)); 
    if (VG_(details).name) {
       VG_(printf)("  user options for %s:\n", VG_(details).name);
       if (VG_(needs).command_line_options)
@@ -462,9 +460,7 @@ void main_process_cmd_line_options ( /*OUT*/Bool* logging_to_fd,
          VG_(clo_verbosity)--;
 
       else if VG_BOOL_CLO(arg, "--stats",          VG_(clo_stats)) {}
-      else if VG_BOOL_CLO(arg, "--xml",            VG_(clo_xml))
-         VG_(debugLog_setXml)(VG_(clo_xml));
-
+      else if VG_BOOL_CLO(arg, "--xml",            VG_(clo_xml)) {}
       else if VG_XACT_CLO(arg, "--vgdb=no",        VG_(clo_vgdb), Vg_VgdbNo) {}
       else if VG_XACT_CLO(arg, "--vgdb=yes",       VG_(clo_vgdb), Vg_VgdbYes) {}
       else if VG_XACT_CLO(arg, "--vgdb=full",      VG_(clo_vgdb), Vg_VgdbFull) {}
@@ -674,10 +670,6 @@ void main_process_cmd_line_options ( /*OUT*/Bool* logging_to_fd,
    }
 
    /* END command-line processing loop */
-
-   /* Determine the path prefix for vgdb */
-   if (VG_(clo_vgdb_prefix) == NULL)
-     VG_(clo_vgdb_prefix) = VG_(vgdb_prefix_default)();
 
    /* Make VEX control parameters sane */
 
@@ -1006,9 +998,9 @@ static void print_file_vars(Char* format)
                   i++;
                }
 
-               VG_(printf_xml)(
-                  "<logfilequalifier> <var>%pS</var> "
-                  "<value>%pS</value> </logfilequalifier>\n",
+               VG_(printf_xml_no_f_c)(
+                  "<logfilequalifier> <var>%t</var> "
+                  "<value>%t</value> </logfilequalifier>\n",
                   qualname,qual
                );
 	       format[i] = '}';
@@ -1026,24 +1018,19 @@ static void print_file_vars(Char* format)
 /*=== Printing the preamble                                        ===*/
 /*====================================================================*/
 
-// Print the argument, escaping any chars that require it.
-static void umsg_arg(const Char* arg)
+// Print the command, escaping any chars that require it.
+static void umsg_or_xml_arg(const Char* arg,
+                            UInt (*umsg_or_xml)( const HChar*, ... ) )
 {
    SizeT len = VG_(strlen)(arg);
    Char* special = " \\<>";
    Int i;
    for (i = 0; i < len; i++) {
       if (VG_(strchr)(special, arg[i])) {
-         VG_(umsg)("\\");   // escape with a backslash if necessary
+         umsg_or_xml("\\");   // escape with a backslash if necessary
       }
-      VG_(umsg)("%c", arg[i]);
+      umsg_or_xml("%c", arg[i]);
    }
-}
-
-// Send output to the XML-stream and escape any XML meta-characters.
-static void xml_arg(const Char* arg)
-{
-   VG_(printf_xml)("%pS", arg);
 }
 
 /* Ok, the logging sink is running now.  Print a suitable preamble.
@@ -1059,9 +1046,6 @@ static void print_preamble ( Bool logging_to_fd,
    HChar* xpost = VG_(clo_xml) ? "</line>" : "";
    UInt (*umsg_or_xml)( const HChar*, ... )
       = VG_(clo_xml) ? VG_(printf_xml) : VG_(umsg);
-
-   void (*umsg_or_xml_arg)( const Char* )
-      = VG_(clo_xml) ? xml_arg : umsg_arg;
 
    vg_assert( VG_(args_for_client) );
    vg_assert( VG_(args_for_valgrind) );
@@ -1083,7 +1067,7 @@ static void print_preamble ( Bool logging_to_fd,
          VG_(printf_xml)("<preamble>\n");
 
       /* Tool details */
-      umsg_or_xml( VG_(clo_xml) ? "%s%pS%pS%pS, %pS%s\n" : "%s%s%s%s, %s%s\n",
+      umsg_or_xml( VG_(clo_xml) ? "%s%t%t%t, %t%s\n" : "%s%s%s%s, %s%s\n",
                    xpre,
                    VG_(details).name, 
                    NULL == VG_(details).version ? "" : "-",
@@ -1099,7 +1083,7 @@ static void print_preamble ( Bool logging_to_fd,
          );
       }
 
-      umsg_or_xml( VG_(clo_xml) ? "%s%pS%s\n" : "%s%s%s\n",
+      umsg_or_xml( VG_(clo_xml) ? "%s%t%s\n" : "%s%s%s\n",
                    xpre, VG_(details).copyright_author, xpost );
 
       /* Core details */
@@ -1114,12 +1098,11 @@ static void print_preamble ( Bool logging_to_fd,
       // favour utility and simplicity over aesthetics.
       umsg_or_xml("%sCommand: ", xpre);
       if (VG_(args_the_exename))
-         umsg_or_xml_arg(VG_(args_the_exename));
-          
+         umsg_or_xml_arg(VG_(args_the_exename), umsg_or_xml);
       for (i = 0; i < VG_(sizeXA)( VG_(args_for_client) ); i++) {
          HChar* s = *(HChar**)VG_(indexXA)( VG_(args_for_client), i );
          umsg_or_xml(" ");
-         umsg_or_xml_arg(s);
+         umsg_or_xml_arg(s, umsg_or_xml);
       }
       umsg_or_xml("%s\n", xpost);
 
@@ -1136,13 +1119,13 @@ static void print_preamble ( Bool logging_to_fd,
       VG_(printf_xml)("\n");
       VG_(printf_xml)("<pid>%d</pid>\n", VG_(getpid)());
       VG_(printf_xml)("<ppid>%d</ppid>\n", VG_(getppid)());
-      VG_(printf_xml)("<tool>%pS</tool>\n", toolname);
+      VG_(printf_xml_no_f_c)("<tool>%t</tool>\n", toolname);
       if (xml_fname_unexpanded)
          print_file_vars(xml_fname_unexpanded);
       if (VG_(clo_xml_user_comment)) {
          /* Note: the user comment itself is XML and is therefore to
             be passed through verbatim (%s) rather than escaped
-            (%pS). */
+            (%t). */
          VG_(printf_xml)("<usercomment>%s</usercomment>\n",
                          VG_(clo_xml_user_comment));
       }
@@ -1151,14 +1134,14 @@ static void print_preamble ( Bool logging_to_fd,
 
       VG_(printf_xml)("  <vargv>\n");
       if (VG_(name_of_launcher))
-         VG_(printf_xml)("    <exe>%pS</exe>\n",
+         VG_(printf_xml_no_f_c)("    <exe>%t</exe>\n",
                                 VG_(name_of_launcher));
       else
-         VG_(printf_xml)("    <exe>%pS</exe>\n",
+         VG_(printf_xml_no_f_c)("    <exe>%t</exe>\n",
                                 "(launcher name unknown)");
       for (i = 0; i < VG_(sizeXA)( VG_(args_for_valgrind) ); i++) {
-         VG_(printf_xml)(
-            "    <arg>%pS</arg>\n",
+         VG_(printf_xml_no_f_c)(
+            "    <arg>%t</arg>\n",
             * (HChar**) VG_(indexXA)( VG_(args_for_valgrind), i )
          );
       }
@@ -1166,11 +1149,11 @@ static void print_preamble ( Bool logging_to_fd,
 
       VG_(printf_xml)("  <argv>\n");
       if (VG_(args_the_exename))
-         VG_(printf_xml)("    <exe>%pS</exe>\n",
+         VG_(printf_xml_no_f_c)("    <exe>%t</exe>\n",
                                 VG_(args_the_exename));
       for (i = 0; i < VG_(sizeXA)( VG_(args_for_client) ); i++) {
-         VG_(printf_xml)(
-            "    <arg>%pS</arg>\n",
+         VG_(printf_xml_no_f_c)(
+            "    <arg>%t</arg>\n",
             * (HChar**) VG_(indexXA)( VG_(args_for_client), i )
          );
       }
@@ -1929,8 +1912,7 @@ Int valgrind_main ( Int argc, HChar **argv, HChar **envp )
         be True here so that we read info from the valgrind executable
         itself. */
      for (i = 0; i < n_seg_starts; i++) {
-        anu.ull = VG_(di_notify_mmap)( seg_starts[i], True/*allow_SkFileV*/,
-                                       -1/*Don't use_fd*/);
+        anu.ull = VG_(di_notify_mmap)( seg_starts[i], True/*allow_SkFileV*/ );
         /* anu.ull holds the debuginfo handle returned by di_notify_mmap,
            if any. */
         if (anu.ull > 0) {
@@ -1950,10 +1932,8 @@ Int valgrind_main ( Int argc, HChar **argv, HChar **envp )
      /* show them all to the debug info reader.  
         Don't read from V segments (unlike Linux) */
      // GrP fixme really?
-     for (i = 0; i < n_seg_starts; i++) {
-        VG_(di_notify_mmap)( seg_starts[i], False/*don't allow_SkFileV*/,
-                             -1/*don't use_fd*/);
-     }
+     for (i = 0; i < n_seg_starts; i++)
+        VG_(di_notify_mmap)( seg_starts[i], False/*don't allow_SkFileV*/ );
 
      VG_(free)( seg_starts );
    }
@@ -1978,17 +1958,6 @@ Int valgrind_main ( Int argc, HChar **argv, HChar **envp )
      change_ownership_v_c_OK 
         = VG_(am_change_ownership_v_to_c)( co_start, co_endPlus - co_start );
      vg_assert(change_ownership_v_c_OK);
-   }
-
-   if (VG_(clo_xml)) {
-      HChar buf[50];
-      VG_(elapsed_wallclock_time)(buf);
-      VG_(printf_xml)( "<status>\n"
-                       "  <state>RUNNING</state>\n"
-                       "  <time>%pS</time>\n"
-                       "</status>\n",
-                       buf );
-      VG_(printf_xml)( "\n" );
    }
 
    //--------------------------------------------------------------
@@ -2192,6 +2161,17 @@ Int valgrind_main ( Int argc, HChar **argv, HChar **envp )
    //--------------------------------------------------------------
    // Run!
    //--------------------------------------------------------------
+   if (VG_(clo_xml)) {
+      HChar buf[50];
+      VG_(elapsed_wallclock_time)(buf);
+      VG_(printf_xml_no_f_c)( "<status>\n"
+                              "  <state>RUNNING</state>\n"
+                              "  <time>%t</time>\n"
+                              "</status>\n",
+                              buf );
+      VG_(printf_xml_no_f_c)( "\n" );
+   }
+
    VG_(debugLog)(1, "main", "Running thread 1\n");
 
    /* As a result of the following call, the last thread standing
@@ -2294,9 +2274,9 @@ void shutdown_actions_NORETURN( ThreadId tid,
    if (VG_(clo_xml)) {
       HChar buf[50];
       VG_(elapsed_wallclock_time)(buf);
-      VG_(printf_xml)( "<status>\n"
+      VG_(printf_xml_no_f_c)( "<status>\n"
                               "  <state>FINISHED</state>\n"
-                              "  <time>%pS</time>\n"
+                              "  <time>%t</time>\n"
                               "</status>\n"
                               "\n",
                               buf);

@@ -172,7 +172,6 @@ int handle_gdb_valgrind_command (char* mon, OutputSink* sink_wanted_at_return)
 "debugging valgrind internals monitor commands:\n"
 "  v.info gdbserver_status : show gdbserver status\n"
 "  v.info memory           : show valgrind heap memory stats\n"
-"  v.info scheduler        : show valgrind thread state and stacktrace\n"
 "  v.set debuglog <level>  : set valgrind debug log level to <level>\n"
 "  v.translate <addr> [<traceflags>]  : debug translation of <addr> with <traceflags>\n"
 "    (default traceflags 0b00100000 : show after instrumentation)\n"
@@ -235,8 +234,7 @@ int handle_gdb_valgrind_command (char* mon, OutputSink* sink_wanted_at_return)
       ret = 1;
       wcmd = strtok_r (NULL, " ", &ssaveptr);
       switch (kwdid = VG_(keyword_id) 
-              ("all_errors n_errs_found last_error gdbserver_status memory"
-               " scheduler",
+              ("all_errors n_errs_found last_error gdbserver_status memory",
                wcmd, kwd_report_all)) {
       case -2:
       case -1: 
@@ -260,10 +258,6 @@ int handle_gdb_valgrind_command (char* mon, OutputSink* sink_wanted_at_return)
          VG_(print_all_arena_stats) ();
          if (VG_(clo_profile_heap))
             VG_(print_arena_cc_analysis) ();
-         ret = 1;
-         break;
-      case  5: /* scheduler */
-         VG_(show_sched_status) ();
          ret = 1;
          break;
       default:
@@ -1016,7 +1010,7 @@ void server_main (void)
       if (status == 'W')
          VG_(umsg) ("\nChild exited with status %d\n", zignal);
       if (status == 'X')
-         VG_(umsg) ("\nChild terminated with signal = 0x%x (%s)\n",
+         VG_(umsg) ("\nChild terminated with zignal = 0x%x (%s)\n",
                     target_signal_to_host (zignal),
                     target_signal_to_name (zignal));
       if (status == 'W' || status == 'X') {

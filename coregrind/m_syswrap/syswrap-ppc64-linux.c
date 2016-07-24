@@ -7,8 +7,8 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2005-2011 Nicholas Nethercote <njn@valgrind.org>
-   Copyright (C) 2005-2011 Cerion Armour-Brown <cerion@open-works.co.uk>
+   Copyright (C) 2005-2010 Nicholas Nethercote <njn@valgrind.org>
+   Copyright (C) 2005-2010 Cerion Armour-Brown <cerion@open-works.co.uk>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -1292,13 +1292,13 @@ static SyscallTableEntry syscall_table[] = {
    LINXY(__NR_sched_rr_get_interval,  sys_sched_rr_get_interval), // 161
    GENXY(__NR_nanosleep,         sys_nanosleep),          // 162
    GENX_(__NR_mremap,            sys_mremap),             // 163
-   LINX_(__NR_setresuid,         sys_setresuid),          // 164
+// _____(__NR_setresuid,         sys_setresuid),          // 164
 
    LINXY(__NR_getresuid,         sys_getresuid),          // 165
 // _____(__NR_query_module,      sys_query_module),       // 166
    GENXY(__NR_poll,              sys_poll),               // 167
 // _____(__NR_nfsservctl,        sys_nfsservctl),         // 168
-   LINX_(__NR_setresgid,         sys_setresgid),          // 169
+// _____(__NR_setresgid,         sys_setresgid),          // 169
 
    LINXY(__NR_getresgid,         sys_getresgid),          // 170
 // _____(__NR_prctl,             sys_prctl),              // 171

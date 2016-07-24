@@ -7,7 +7,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Nicholas Nethercote
+   Copyright (C) 2000-2010 Nicholas Nethercote
       njn@valgrind.org
 
    This program is free software; you can redistribute it and/or
@@ -59,6 +59,16 @@
 #include "priv_syswrap-generic.h"
 #include "priv_syswrap-linux.h"
 
+#include "pub_core_hashtable.h"
+#include "avalanche.h"
+
+#ifdef _AVALANCHE
+
+extern VgHashTable fds;
+extern HChar* curfile;
+extern Int curfilenum;
+
+#endif
 
 // Run a thread from beginning to end and return the thread's
 // scheduler-return-code.
@@ -666,6 +676,36 @@ PRE(sys_exit_group)
 PRE(sys_llseek)
 {
    PRINT("sys_llseek ( %ld, 0x%lx, 0x%lx, %#lx, %ld )", ARG1,ARG2,ARG3,ARG4,ARG5);
+
+#ifdef _AVALANCHE
+
+   fdsNode* node = VG_(HT_lookup)(fds, ARG1);
+   ULong hi_offs, lo_offs;
+   hi_offs = ((ULong) ARG2) << 32;
+   lo_offs = ARG3;
+   HWord res_offs = (HWord) (hi_offs | lo_offs);
+
+   if (node != NULL)
+   {
+      switch(ARG5)
+      {
+         case VKI_SEEK_SET: node->offs = res_offs;
+                            break;
+         case VKI_SEEK_CUR: node->offs += res_offs; 
+                            break;
+         case VKI_SEEK_END: node->offs = node->size + res_offs; 
+                            break;
+         default:           break;
+      }
+   }
+   else
+   {
+      curfile = NULL;
+      curfilenum = -1;
+   }
+
+#endif
+
    PRE_REG_READ5(long, "llseek",
                  unsigned int, fd, unsigned long, offset_high,
                  unsigned long, offset_low, vki_loff_t *, result,
@@ -2726,6 +2766,31 @@ PRE(sys_utime)
 PRE(sys_lseek)
 {
    PRINT("sys_lseek ( %ld, %ld, %ld )", ARG1,ARG2,ARG3);
+
+#ifdef _AVALANCHE
+
+   fdsNode* node = VG_(HT_lookup)(fds, ARG1);
+   if (node != NULL)
+   {
+      switch(ARG3)
+      {
+         case VKI_SEEK_SET: node->offs = ARG2; 
+                            break;
+         case VKI_SEEK_CUR: node->offs += ARG2; 
+                            break;
+         case VKI_SEEK_END: node->offs = node->size + ARG2; 
+                            break;
+         default:           break;
+      }
+   }
+   else
+   {
+      curfile = NULL;
+      curfilenum = -1;
+   }
+
+#endif
+
    PRE_REG_READ3(vki_off_t, "lseek",
                  unsigned int, fd, vki_off_t, offset, unsigned int, whence);
 }
@@ -5032,74 +5097,6 @@ PRE(sys_ioctl)
       }
       break;
 
-#  if defined(VGPV_arm_linux_android)
-   /* ashmem */
-   case VKI_ASHMEM_GET_SIZE:
-   case VKI_ASHMEM_SET_SIZE:
-   case VKI_ASHMEM_GET_PROT_MASK:
-   case VKI_ASHMEM_SET_PROT_MASK:
-   case VKI_ASHMEM_GET_PIN_STATUS:
-   case VKI_ASHMEM_PURGE_ALL_CACHES:
-       break;
-   case VKI_ASHMEM_GET_NAME:
-       PRE_MEM_WRITE( "ioctl(ASHMEM_SET_NAME)", ARG3, VKI_ASHMEM_NAME_LEN );
-       break;
-   case VKI_ASHMEM_SET_NAME:
-       PRE_MEM_RASCIIZ( "ioctl(ASHMEM_SET_NAME)", ARG3);
-       break;
-   case VKI_ASHMEM_PIN:
-   case VKI_ASHMEM_UNPIN:
-       PRE_MEM_READ( "ioctl(ASHMEM_PIN|ASHMEM_UNPIN)",
-                     ARG3, sizeof(struct vki_ashmem_pin) );
-       break;
-
-   /* binder */
-   case VKI_BINDER_WRITE_READ:
-       if (ARG3) {
-           struct vki_binder_write_read* bwr
-              = (struct vki_binder_write_read*)ARG3;
-
-           PRE_FIELD_READ("ioctl(BINDER_WRITE_READ).write_buffer",
-                          bwr->write_buffer);
-           PRE_FIELD_READ("ioctl(BINDER_WRITE_READ).write_size",
-                          bwr->write_size);
-           PRE_FIELD_READ("ioctl(BINDER_WRITE_READ).write_consumed",
-                          bwr->write_consumed);
-           PRE_FIELD_READ("ioctl(BINDER_WRITE_READ).read_buffer",
-                          bwr->read_buffer);
-           PRE_FIELD_READ("ioctl(BINDER_WRITE_READ).read_size",
-                          bwr->read_size);
-           PRE_FIELD_READ("ioctl(BINDER_WRITE_READ).read_consumed",
-                          bwr->read_consumed);
-
-           PRE_FIELD_WRITE("ioctl(BINDER_WRITE_READ).write_consumed",
-                           bwr->write_consumed);
-           PRE_FIELD_WRITE("ioctl(BINDER_WRITE_READ).read_consumed",
-                           bwr->read_consumed);
-
-           if (bwr->read_size)
-               PRE_MEM_WRITE("ioctl(BINDER_WRITE_READ).read_buffer[]",
-                             (Addr)bwr->read_buffer, bwr->read_size);
-           if (bwr->write_size)
-               PRE_MEM_READ("ioctl(BINDER_WRITE_READ).write_buffer[]",
-                            (Addr)bwr->write_buffer, bwr->write_size);
-       }
-       break;
-
-   case VKI_BINDER_SET_IDLE_TIMEOUT:
-   case VKI_BINDER_SET_MAX_THREADS:
-   case VKI_BINDER_SET_IDLE_PRIORITY:
-   case VKI_BINDER_SET_CONTEXT_MGR:
-   case VKI_BINDER_THREAD_EXIT:
-       break;
-   case VKI_BINDER_VERSION:
-       if (ARG3) {
-           struct vki_binder_version* bv = (struct vki_binder_version*)ARG3;
-           PRE_FIELD_WRITE("ioctl(BINDER_VERSION)", bv->protocol_version);
-       }
-       break;
-#  endif /* defined(VGPV_arm_linux_android) */
-
    default:
       /* EVIOC* are variable length and return size written on success */
       switch (ARG2 & ~(_VKI_IOC_SIZEMASK << _VKI_IOC_SIZESHIFT)) {
@@ -5135,99 +5132,6 @@ PRE(sys_ioctl)
 POST(sys_ioctl)
 {
    vg_assert(SUCCESS);
-
-   /* --- BEGIN special IOCTL handlers for specific Android hardware --- */
-
-#  if defined(VGPV_arm_linux_android)
-
-#  if defined(ANDROID_HARDWARE_nexus_s)
-
-   /* BEGIN undocumented ioctls for the graphics hardware (??)
-      (libpvr) on Nexus S */
-   if (ARG2 >= 0xC01C6700 && ARG2 <= 0xC01C67FF && ARG3 >= 0x1000) {
-      /* What's going on here: there appear to be a bunch of ioctls of
-         the form 0xC01C67xx which are undocumented, and if unhandled
-         give rise to a vast number of false positives in Memcheck.
-
-         The "normal" intrepretation of an ioctl of this form would be
-         that the 3rd arg is a pointer to an area of size 0x1C (28
-         bytes) which is filled in by the kernel.  Hence you might
-         think that "POST_MEM_WRITE(ARG3, 28)" would fix it.  But it
-         doesn't.
-
-         It requires POST_MEM_WRITE(ARG3, 256) to silence them.  One
-         interpretation of this is that ARG3 really does point to a 28
-         byte struct, but inside that are pointers to other areas also
-         filled in by the kernel.  If these happen to be allocated
-         just back up the stack then the 256 byte paint might cover
-         them too, somewhat indiscriminately.
-
-         By printing out ARG3 and also the 28 bytes that it points at,
-         it's possible to guess that the 7 word structure has this form
-
-           0            1    2    3        4    5        6           
-           ioctl-number 0x1C ptr1 ptr1size ptr2 ptr2size aBitMask
-
-         Unfortunately that doesn't seem to work for some reason, so
-         stay with the blunt-instrument approach for the time being.
-      */
-      if (1) {
-         /* blunt-instrument approach */
-         if (0) VG_(printf)("QQQQQQQQQQ c01c quick hack actioned"
-                            " (%08lx, %08lx)\n", ARG2, ARG3);
-         POST_MEM_WRITE(ARG3, 256);
-      } else {
-         /* be a bit more sophisticated */
-         if (0) VG_(printf)("QQQQQQQQQQ c01c quick hack actioned"
-                            " (%08lx, %08lx) (fancy)\n", ARG2, ARG3);
-         POST_MEM_WRITE(ARG3, 28);
-         UInt* word = (UInt*)ARG3;
-         if (word && word[2] && word[3] < 0x200/*stay sane*/)
-            POST_MEM_WRITE(word[2], word[3]); // "ptr1"
-         if (word && word[4] && word[5] < 0x200/*stay sane*/)
-            POST_MEM_WRITE(word[4], word[5]); // "ptr2"
-      }
-      if (0) {
-         Int i;
-         VG_(printf)("QQQQQQQQQQ ");
-         for (i = 0; i < (0x1C/4); i++) {
-            VG_(printf)("%08x ", ((UInt*)(ARG3))[i]);
-         }
-         VG_(printf)("\n");
-      }
-      return;
-   }
-   /* END Nexus S specific ioctls */
-
-
-#  elif defined(ANDROID_HARDWARE_pandaboard)
-
-   /* BEGIN Pandaboard specific ioctls */
-   /* currently none are known */
-   /* END Pandaboard specific ioctls */
-
-
-#  else /* no ANDROID_HARDWARE_anything defined */
-
-#   warning ""
-#   warning "You need to define one the CPP symbols ANDROID_HARDWARE_blah"
-#   warning "at configure time, to tell Valgrind what hardware you are"
-#   warning "building for.  Currently known values are"
-#   warning ""
-#   warning "   ANDROID_HARDWARE_nexus_s       Samsung Nexus S"
-#   warning "   ANDROID_HARDWARE_pandaboard    Pandaboard running Linaro Android"
-#   warning ""
-#   warning "Make sure you exactly follow the steps in README.android."
-#   warning ""
-#   error "No CPP symbol ANDROID_HARDWARE_blah defined.  Giving up."
-
-#  endif /* cases for ANDROID_HARDWARE_blah */
-
-#  endif /* defined(VGPV_arm_linux_android) */
-
-   /* --- END special IOCTL handlers for specific Android hardware --- */
-
-   /* --- normal handling --- */
    switch (ARG2 /* request */) {
    case VKI_TCSETS:
    case VKI_TCSETSW:
@@ -6007,49 +5911,6 @@ POST(sys_ioctl)
                         sizeof(struct vki_sockaddr));
       }
       break;
-
-#  if defined(VGPV_arm_linux_android)
-   /* ashmem */
-   case VKI_ASHMEM_GET_SIZE:
-   case VKI_ASHMEM_SET_SIZE:
-   case VKI_ASHMEM_GET_PROT_MASK:
-   case VKI_ASHMEM_SET_PROT_MASK:
-   case VKI_ASHMEM_GET_PIN_STATUS:
-   case VKI_ASHMEM_PURGE_ALL_CACHES:
-   case VKI_ASHMEM_SET_NAME:
-   case VKI_ASHMEM_PIN:
-   case VKI_ASHMEM_UNPIN:
-       break;
-   case VKI_ASHMEM_GET_NAME:
-       POST_MEM_WRITE( ARG3, VKI_ASHMEM_NAME_LEN );
-       break;
-
-   /* binder */
-   case VKI_BINDER_WRITE_READ:
-       if (ARG3) {
-           struct vki_binder_write_read* bwr
-              = (struct vki_binder_write_read*)ARG3;
-           POST_FIELD_WRITE(bwr->write_consumed);
-           POST_FIELD_WRITE(bwr->read_consumed);
-
-           if (bwr->read_size)
-               POST_MEM_WRITE((Addr)bwr->read_buffer, bwr->read_consumed);
-       }
-       break;
-
-   case VKI_BINDER_SET_IDLE_TIMEOUT:
-   case VKI_BINDER_SET_MAX_THREADS:
-   case VKI_BINDER_SET_IDLE_PRIORITY:
-   case VKI_BINDER_SET_CONTEXT_MGR:
-   case VKI_BINDER_THREAD_EXIT:
-       break;
-   case VKI_BINDER_VERSION:
-       if (ARG3) {
-           struct vki_binder_version* bv = (struct vki_binder_version*)ARG3;
-           POST_FIELD_WRITE(bv->protocol_version);
-       }
-       break;
-#  endif /* defined(VGPV_arm_linux_android) */
 
    default:
       /* EVIOC* are variable length and return size written on success */

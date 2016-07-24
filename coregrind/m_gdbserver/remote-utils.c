@@ -214,52 +214,38 @@ void safe_mknod (char *nod)
    NAME is the filename used for communication.  
    For Valgrind, name is the prefix for the two read and write FIFOs
    The two FIFOs names will be build by appending 
-   -from-vgdb-to-pid-by-user-on-host and -to-vgdb-from-pid-by-user-on-host
+   -from-vgdb-to-pid and -to-vgdb-from-pid
    with pid being the pidnr of the valgrind process These two FIFOs
    will be created if not existing yet. They will be removed when
    the gdbserver connection is closed or the process exits */
 
 void remote_open (char *name)
 {
-   const HChar *user, *host;
-   int save_fcntl_flags, len;
+   int save_fcntl_flags;
    VgdbShared vgdbinit = 
       {0, 0, 0, (Addr) VG_(invoke_gdbserver),
        (Addr) VG_(threads), sizeof(ThreadState), 
        offsetof(ThreadState, status),
        offsetof(ThreadState, os_state) + offsetof(ThreadOSstate, lwpid)};
    const int pid = VG_(getpid)();
-   const int name_default = strcmp(name, VG_(vgdb_prefix_default)()) == 0;
+   const int name_default = strcmp(name, VG_CLO_VGDB_PREFIX_DEFAULT) == 0;
    Addr addr_shared;
    SysRes o;
    int shared_mem_fd = INVALID_DESCRIPTOR;
    
-   user = VG_(getenv)("LOGNAME");
-   if (user == NULL) user = VG_(getenv)("USER");
-   if (user == NULL) user = "???";
-
-   host = VG_(getenv)("HOST");
-   if (host == NULL) host = VG_(getenv)("HOSTNAME");
-   if (host == NULL) host = "???";
-
-   len = strlen(name) + strlen(user) + strlen(host) + 40;
-
    if (from_gdb != NULL) 
       free (from_gdb);
-   from_gdb = malloc (len);
+   from_gdb = malloc (strlen(name) + 30);
    if (to_gdb != NULL)
       free (to_gdb);
-   to_gdb = malloc (len);
+   to_gdb = malloc (strlen(name) + 30);
    if (shared_mem != NULL)
       free (shared_mem);
-   shared_mem = malloc (len);
+   shared_mem = malloc (strlen(name) + 30);
    /* below 3 lines must match the equivalent in vgdb.c */
-   VG_(sprintf) (from_gdb,   "%s-from-vgdb-to-%d-by-%s-on-%s",    name,
-                 pid, user, host);
-   VG_(sprintf) (to_gdb,     "%s-to-vgdb-from-%d-by-%s-on-%s",    name,
-                 pid, user, host);
-   VG_(sprintf) (shared_mem, "%s-shared-mem-vgdb-%d-by-%s-on-%s", name,
-                 pid, user, host);
+   VG_(sprintf) (from_gdb,   "%s-from-vgdb-to-%d",    name, pid);
+   VG_(sprintf) (to_gdb,     "%s-to-vgdb-from-%d",    name, pid);
+   VG_(sprintf) (shared_mem, "%s-shared-mem-vgdb-%d", name, pid);
    if (VG_(clo_verbosity) > 1) {
       VG_(umsg)("embedded gdbserver: reading from %s\n", from_gdb);
       VG_(umsg)("embedded gdbserver: writing to   %s\n", to_gdb);
@@ -1073,19 +1059,3 @@ int decode_X_packet (char *from, int packet_len, CORE_ADDR *mem_addr_ptr,
    return 0;
 }
 
-
-/* Return the path prefix for the named pipes (FIFOs) used by vgdb/gdb
-   to communicate with valgrind */
-HChar *
-VG_(vgdb_prefix_default)(void)
-{
-   const HChar *tmpdir;
-   HChar *prefix;
-   
-   tmpdir = VG_(tmpdir)();
-   prefix = malloc(strlen(tmpdir) + strlen("/vgdb-pipe") + 1);
-   strcpy(prefix, tmpdir);
-   strcat(prefix, "/vgdb-pipe");
-
-   return prefix;
-}

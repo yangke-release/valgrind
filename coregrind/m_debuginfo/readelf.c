@@ -8,7 +8,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -2218,7 +2218,7 @@ Bool ML_(read_elf_debug_info) ( struct _DebugInfo* di )
             vg_assert(crc_offset + sizeof(UInt) <= debuglink_sz);
 
             /* Extract the CRC from the debuglink section */
-            crc = ML_(read_UInt)(debuglink_img + crc_offset);
+            crc = *(UInt *)(debuglink_img + crc_offset);
 
             /* See if we can find a matching debug file */
             find_debug_file( di, di->fsm.filename, buildid,

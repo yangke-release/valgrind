@@ -8,7 +8,7 @@
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
 
-   Copyright (C) 2000-2011 Julian Seward 
+   Copyright (C) 2000-2010 Julian Seward 
       jseward@acm.org
 
    This program is free software; you can redistribute it and/or
@@ -660,10 +660,6 @@ static ULong di_notify_ACHIEVE_ACCEPT_STATE ( struct _DebugInfo* di )
    carefully control when the thing will read symbols from the
    Valgrind executable itself.
 
-   If use_fd is not -1, that is used instead of the filename; this
-   avoids perturbing fcntl locks, which are released by simply
-   re-opening and closing the same file (even via different fd!).
-
    If a call to VG_(di_notify_mmap) causes debug info to be read, then
    the returned ULong is an abstract handle which can later be used to
    refer to the debuginfo read as a result of this specific mapping,
@@ -671,20 +667,18 @@ static ULong di_notify_ACHIEVE_ACCEPT_STATE ( struct _DebugInfo* di )
    will be one or above.  If the returned value is zero, no debug info
    was read. */
 
-ULong VG_(di_notify_mmap)( Addr a, Bool allow_SkFileV, Int use_fd )
+ULong VG_(di_notify_mmap)( Addr a, Bool allow_SkFileV )
 {
    NSegment const * seg;
    HChar*     filename;
    Bool       is_rx_map, is_rw_map, is_ro_map;
    DebugInfo* di;
-   Int        actual_fd, oflags;
-   SysRes     preadres;
+   SysRes     fd;
+   Int        nread, oflags;
    HChar      buf1k[1024];
    Bool       debug = False;
    SysRes     statres;
    struct vg_stat statbuf;
-
-   vg_assert(use_fd >= -1);
 
    /* In short, figure out if this mapping is of interest to us, and
       if so, try to guess what ld.so is doing and when/if we should
@@ -823,46 +817,36 @@ ULong VG_(di_notify_mmap)( Addr a, Bool allow_SkFileV, Int use_fd )
 #  if defined(VKI_O_LARGEFILE)
    oflags |= VKI_O_LARGEFILE;
 #  endif
-
-   if (use_fd == -1) {
-      SysRes fd = VG_(open)( filename, oflags, 0 );
-      if (sr_isError(fd)) {
-         if (sr_Err(fd) != VKI_EACCES) {
-            DebugInfo fake_di;
-            VG_(memset)(&fake_di, 0, sizeof(fake_di));
-            fake_di.fsm.filename = filename;
-            ML_(symerr)(&fake_di, True,
-                        "can't open file to inspect ELF header");
-         }
-         return 0;
+   fd = VG_(open)( filename, oflags, 0 );
+   if (sr_isError(fd)) {
+      if (sr_Err(fd) != VKI_EACCES) {
+         DebugInfo fake_di;
+         VG_(memset)(&fake_di, 0, sizeof(fake_di));
+         fake_di.fsm.filename = filename;
+         ML_(symerr)(&fake_di, True, "can't open file to inspect ELF header");
       }
-      actual_fd = sr_Res(fd);
-   } else {
-      actual_fd = use_fd;
+      return 0;
    }
+   nread = VG_(read)( sr_Res(fd), buf1k, sizeof(buf1k) );
+   VG_(close)( sr_Res(fd) );
 
-   preadres = VG_(pread)( actual_fd, buf1k, sizeof(buf1k), 0 );
-   if (use_fd == -1) {
-      VG_(close)( actual_fd );
-   }
-
-   if (sr_isError(preadres)) {
+   if (nread == 0)
+      return 0;
+   if (nread < 0) {
       DebugInfo fake_di;
       VG_(memset)(&fake_di, 0, sizeof(fake_di));
       fake_di.fsm.filename = filename;
       ML_(symerr)(&fake_di, True, "can't read file to inspect ELF header");
       return 0;
    }
-   if (sr_Res(preadres) == 0)
-      return 0;
-   vg_assert(sr_Res(preadres) > 0 && sr_Res(preadres) <= sizeof(buf1k) );
+   vg_assert(nread > 0 && nread <= sizeof(buf1k) );
 
    /* We're only interested in mappings of object files. */
 #  if defined(VGO_linux)
-   if (!ML_(is_elf_object_file)( buf1k, (SizeT)sr_Res(preadres) ))
+   if (!ML_(is_elf_object_file)( buf1k, (SizeT)nread ))
       return 0;
 #  elif defined(VGO_darwin)
-   if (!ML_(is_macho_object_file)( buf1k, (SizeT)sr_Res(preadres) ))
+   if (!ML_(is_macho_object_file)( buf1k, (SizeT)nread ))
       return 0;
 #  else
 #    error "unknown OS"
@@ -2052,12 +2036,12 @@ UWord evalCfiExpr ( XArray* exprs, Int ix,
          a = evalCfiExpr( exprs, e->Cex.Deref.ixAddr, eec, ok );
          if (!(*ok)) return 0;
          if (a < eec->min_accessible
-             || a > eec->max_accessible - sizeof(UWord) + 1) {
+             || (a + sizeof(UWord) - 1) > eec->max_accessible) {
             *ok = False;
             return 0;
          }
          /* let's hope it doesn't trap! */
-         return ML_(read_UWord)((void *)a);
+         return * ((UWord*)a);
       default: 
          goto unhandled;
    }
@@ -2258,7 +2242,7 @@ static Addr compute_cfa ( D3UnwindRegs* uregs,
          Addr a = uregs->sp + cfsi->cfa_off;
          if (a < min_accessible || a > max_accessible-sizeof(Addr))
             break;
-         cfa = ML_(read_Addr)((void *)a);
+         cfa = *(Addr*)a;
          break;
       }
       case CFIR_SAME:
@@ -2401,7 +2385,7 @@ Bool VG_(use_CF_info) ( /*MOD*/D3UnwindRegs* uregsHere,
                if (a < min_accessible                   \
                    || a > max_accessible-sizeof(Addr))  \
                   return False;                         \
-               _prev = ML_(read_Addr)((void *)a);       \
+               _prev = *(Addr*)a;                       \
                break;                                   \
             }                                           \
             case CFIR_CFAREL:                           \
@@ -2563,10 +2547,10 @@ Bool VG_(use_FPO_info) ( /*MOD*/Addr* ipP,
  
    spHere = *spP;
 
-   *ipP = ML_(read_Addr)((void *)(spHere + 4*(fpo->cbRegs + fpo->cdwLocals)));
-   *spP =                         spHere + 4*(fpo->cbRegs + fpo->cdwLocals + 1 
-                                                          + fpo->cdwParams);
-   *fpP = ML_(read_Addr)((void *)(spHere + 4*2));
+   *ipP = *(Addr *)(spHere + 4*(fpo->cbRegs + fpo->cdwLocals));
+   *spP =           spHere + 4*(fpo->cbRegs + fpo->cdwLocals + 1 
+                                            + fpo->cdwParams);
+   *fpP = *(Addr *)(spHere + 4*2);
    return True;
 }
 
@@ -2579,14 +2563,14 @@ Bool VG_(use_FPO_info) ( /*MOD*/Addr* ipP,
 /*--------------------------------------------------------------*/
 
 /* Try to make p2XA(dst, fmt, args..) turn into
-   VG_(xaprintf)(dst, fmt, args) without having to resort to
+   VG_(xaprintf_no_f_c)(dst, fmt, args) without having to resort to
    vararg macros.  As usual with everything to do with varargs, it's
    an ugly hack.
 
    //#define p2XA(dstxa, format, args...)
-   //   VG_(xaprintf)(dstxa, format, ##args)
+   //   VG_(xaprintf_no_f_c)(dstxa, format, ##args)
 */
-#define  p2XA  VG_(xaprintf)
+#define  p2XA  VG_(xaprintf_no_f_c)
 
 /* Add a zero-terminating byte to DST, which must be an XArray* of
    HChar. */
@@ -2728,7 +2712,7 @@ static void format_message ( /*MOD*/XArray* /* of HChar */ dn1,
       if (xml) {
          TAGL( dn1 );
          p2XA( dn1,
-               "Location 0x%lx is %lu byte%s inside local var \"%pS\",",
+               "Location 0x%lx is %lu byte%s inside local var \"%t\",",
                data_addr, var_offset, vo_plural, var->name );
          TAGR( dn1 );
          TAGL( dn2 );
@@ -2752,18 +2736,18 @@ static void format_message ( /*MOD*/XArray* /* of HChar */ dn1,
       if (xml) {
          TAGL( dn1 );
          p2XA( dn1,
-               "Location 0x%lx is %lu byte%s inside local var \"%pS\"",
+               "Location 0x%lx is %lu byte%s inside local var \"%t\"",
                data_addr, var_offset, vo_plural, var->name );
          TAGR( dn1 );
          XAGL( dn2 );
          TXTL( dn2 );
          p2XA( dn2,
-               "declared at %pS:%d, in frame #%d of thread %d",
+               "declared at %t:%d, in frame #%d of thread %d",
                var->fileName, var->lineNo, frameNo, (Int)tid );
          TXTR( dn2 );
          // FIXME: also do <dir>
          p2XA( dn2,
-               " <file>%pS</file> <line>%d</line> ", 
+               " <file>%t</file> <line>%d</line> ", 
                var->fileName, var->lineNo );
          XAGR( dn2 );
       } else {
@@ -2784,7 +2768,7 @@ static void format_message ( /*MOD*/XArray* /* of HChar */ dn1,
       if (xml) {
          TAGL( dn1 );
          p2XA( dn1,
-               "Location 0x%lx is %lu byte%s inside %pS%pS",
+               "Location 0x%lx is %lu byte%s inside %t%t",
                data_addr, residual_offset, ro_plural, var->name,
                (HChar*)(VG_(indexXA)(described,0)) );
          TAGR( dn1 );
@@ -2808,19 +2792,19 @@ static void format_message ( /*MOD*/XArray* /* of HChar */ dn1,
       if (xml) {
          TAGL( dn1 );
          p2XA( dn1,
-               "Location 0x%lx is %lu byte%s inside %pS%pS,",
+               "Location 0x%lx is %lu byte%s inside %t%t,",
                data_addr, residual_offset, ro_plural, var->name,
                (HChar*)(VG_(indexXA)(described,0)) );
          TAGR( dn1 );
          XAGL( dn2 );
          TXTL( dn2 );
          p2XA( dn2,
-               "declared at %pS:%d, in frame #%d of thread %d",
+               "declared at %t:%d, in frame #%d of thread %d",
                var->fileName, var->lineNo, frameNo, (Int)tid );
          TXTR( dn2 );
          // FIXME: also do <dir>
          p2XA( dn2,
-               " <file>%pS</file> <line>%d</line> ",
+               " <file>%t</file> <line>%d</line> ",
                var->fileName, var->lineNo );
          XAGR( dn2 );
       } else {
@@ -2842,7 +2826,7 @@ static void format_message ( /*MOD*/XArray* /* of HChar */ dn1,
       if (xml) {
          TAGL( dn1 );
          p2XA( dn1,
-               "Location 0x%lx is %lu byte%s inside global var \"%pS\"",
+               "Location 0x%lx is %lu byte%s inside global var \"%t\"",
                data_addr, var_offset, vo_plural, var->name );
          TAGR( dn1 );
       } else {
@@ -2860,18 +2844,18 @@ static void format_message ( /*MOD*/XArray* /* of HChar */ dn1,
       if (xml) {
          TAGL( dn1 );
          p2XA( dn1,
-               "Location 0x%lx is %lu byte%s inside global var \"%pS\"",
+               "Location 0x%lx is %lu byte%s inside global var \"%t\"",
                data_addr, var_offset, vo_plural, var->name );
          TAGR( dn1 );
          XAGL( dn2 );
          TXTL( dn2 );
          p2XA( dn2,
-               "declared at %pS:%d",
+               "declared at %t:%d",
                var->fileName, var->lineNo);
          TXTR( dn2 );
          // FIXME: also do <dir>
          p2XA( dn2,
-               " <file>%pS</file> <line>%d</line> ",
+               " <file>%t</file> <line>%d</line> ",
                var->fileName, var->lineNo );
          XAGR( dn2 );
       } else {
@@ -2892,7 +2876,7 @@ static void format_message ( /*MOD*/XArray* /* of HChar */ dn1,
       if (xml) {
          TAGL( dn1 );
          p2XA( dn1,
-               "Location 0x%lx is %lu byte%s inside %pS%pS,",
+               "Location 0x%lx is %lu byte%s inside %t%t,",
                data_addr, residual_offset, ro_plural, var->name,
                (HChar*)(VG_(indexXA)(described,0)) );
          TAGR( dn1 );
@@ -2916,19 +2900,19 @@ static void format_message ( /*MOD*/XArray* /* of HChar */ dn1,
       if (xml) {
          TAGL( dn1 );
          p2XA( dn1,
-               "Location 0x%lx is %lu byte%s inside %pS%pS,",
+               "Location 0x%lx is %lu byte%s inside %t%t,",
                data_addr, residual_offset, ro_plural, var->name,
                (HChar*)(VG_(indexXA)(described,0)) );
          TAGR( dn1 );
          XAGL( dn2 );
          TXTL( dn2 );
          p2XA( dn2,
-               "a global variable declared at %pS:%d",
+               "a global variable declared at %t:%d",
                var->fileName, var->lineNo);
          TXTR( dn2 );
          // FIXME: also do <dir>
          p2XA( dn2,
-               " <file>%pS</file> <line>%d</line> ",
+               " <file>%t</file> <line>%d</line> ",
                var->fileName, var->lineNo );
          XAGR( dn2 );
       } else {
