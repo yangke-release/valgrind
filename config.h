@@ -29,7 +29,7 @@
 /* #undef GLIBC_2_10 */
 
 /* Define to 1 if you're using glibc 2.11.x */
-#define GLIBC_2_11 1
+/* #undef GLIBC_2_11 */
 
 /* Define to 1 if you're using glibc 2.12.x */
 /* #undef GLIBC_2_12 */
@@ -56,7 +56,7 @@
 /* #undef GLIBC_2_6 */
 
 /* Define to 1 if you're using glibc 2.7.x */
-/* #undef GLIBC_2_7 */
+#define GLIBC_2_7 1
 
 /* Define to 1 if you're using glibc 2.8.x */
 /* #undef GLIBC_2_8 */
@@ -97,10 +97,10 @@
 #define HAVE_EPOLL_PWAIT 1
 
 /* Define to 1 if you have the `eventfd' function. */
-#define HAVE_EVENTFD 1
+/* #undef HAVE_EVENTFD */
 
 /* Define to 1 if you have the `eventfd_read' function. */
-#define HAVE_EVENTFD_READ 1
+/* #undef HAVE_EVENTFD_READ */
 
 /* Define to 1 if you have the `getpagesize' function. */
 #define HAVE_GETPAGESIZE 1
@@ -151,7 +151,7 @@
 #define HAVE_PTHREAD_CONDATTR_SETCLOCK 1
 
 /* Define to 1 if you have the `pthread_create@glibc2.0' function. */
-/* #undef HAVE_PTHREAD_CREATE_GLIBC_2_0 */
+#define HAVE_PTHREAD_CREATE_GLIBC_2_0 1
 
 /* Define to 1 if you have the `PTHREAD_MUTEX_ADAPTIVE_NP' constant. */
 #define HAVE_PTHREAD_MUTEX_ADAPTIVE_NP 1
@@ -239,7 +239,7 @@
 #define HAVE_SYS_EPOLL_H 1
 
 /* Define to 1 if you have the <sys/eventfd.h> header file. */
-#define HAVE_SYS_EVENTFD_H 1
+/* #undef HAVE_SYS_EVENTFD_H */
 
 /* Define to 1 if you have the <sys/klog.h> header file. */
 #define HAVE_SYS_KLOG_H 1
@@ -251,7 +251,7 @@
 #define HAVE_SYS_POLL_H 1
 
 /* Define to 1 if you have the <sys/signalfd.h> header file. */
-#define HAVE_SYS_SIGNALFD_H 1
+/* #undef HAVE_SYS_SIGNALFD_H */
 
 /* Define to 1 if you have the <sys/signal.h> header file. */
 #define HAVE_SYS_SIGNAL_H 1
@@ -299,7 +299,7 @@
 #define PACKAGE_NAME "Valgrind"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Valgrind 3.7.0"
+#define PACKAGE_STRING "Valgrind 3.7.0.SVN"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "valgrind"
@@ -308,7 +308,10 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "3.7.0"
+#define PACKAGE_VERSION "3.7.0.SVN"
+
+/* Define as the return type of signal handlers (`int' or `void'). */
+#define RETSIGTYPE void
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
@@ -317,7 +320,7 @@
 #define TIME_WITH_SYS_TIME 1
 
 /* Version number of package */
-#define VERSION "3.7.0"
+#define VERSION "3.7.0.SVN"
 
 /* Temporary files directory */
 #define VG_TMPDIR "/tmp"

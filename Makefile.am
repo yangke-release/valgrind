@@ -3,18 +3,9 @@ AUTOMAKE_OPTIONS = foreign 1.7 dist-bzip2
 
 include $(top_srcdir)/Makefile.all.am 
 
-TOOLS =		memcheck \
-		cachegrind \
-		callgrind \
-		massif \
-		lackey \
-		none \
-		helgrind \
-		drd
+TOOLS =		memcheck tracegrind covgrind helgrind
 
-EXP_TOOLS = 	exp-sgcheck \
-		exp-bbv \
-		exp-dhat
+EXP_TOOLS = 
 
 # DDD: once all tools work on Darwin, TEST_TOOLS and TEST_EXP_TOOLS can be
 # replaced with TOOLS and EXP_TOOLS.
@@ -63,8 +54,7 @@ dist_noinst_DATA = $(SUPP_FILES)
 
 pkglib_DATA = default.supp
 
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = valgrind.pc
+noinst_DATA = valgrind.pc
 
 BUILT_SOURCES  = default.supp valgrind.pc
 CLEANFILES     = default.supp
@@ -76,7 +66,6 @@ default.supp: $(DEFAULT_SUPP_FILES)
 
 ## Preprend @PERL@ because tests/vg_regtest isn't executable
 regtest: check
-	-tests/check_makefile_consistency gdbserver_tests $(TEST_TOOLS) $(TEST_EXP_TOOLS)
 	gdbserver_tests/make_local_links $(GDB)
 	@PERL@ tests/vg_regtest gdbserver_tests $(TEST_TOOLS) $(TEST_EXP_TOOLS)
 nonexp-regtest: check

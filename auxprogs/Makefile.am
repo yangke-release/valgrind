@@ -1,8 +1,6 @@
 include $(top_srcdir)/Makefile.all.am
 
 dist_noinst_SCRIPTS = \
-	change-copyright-year \
-	dump_insn_ppc.sh \
 	gen-mdg \
 	gsl16test \
 	gsl19test \
@@ -22,7 +20,7 @@ EXTRA_DIST = \
 # valgrind_listener (built for the primary target only)
 #----------------------------------------------------------------------------
 
-bin_PROGRAMS = valgrind-listener
+noinst_PROGRAMS = valgrind-listener
 
 valgrind_listener_SOURCES = valgrind-listener.c
 valgrind_listener_CPPFLAGS  = $(AM_CPPFLAGS_PRI) -I$(top_srcdir)/coregrind

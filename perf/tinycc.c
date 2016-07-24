@@ -2162,7 +2162,7 @@ typedef union CValue {
     unsigned long long ull;
     struct CString *cstr;
     void *ptr;
-    int tab[sizeof(long double) / sizeof(int)];
+    int tab[1];
 } CValue;
 
 /* value on stack */
@@ -7305,7 +7305,7 @@ char *get_tok_str(int v, CValue *cv)
     case TOK_CLLONG:
     case TOK_CULLONG:
         /* XXX: not quite exact, but only useful for testing  */
-        sprintf(p, "%llu", cv->ull);
+        sprintf(p, "%Lu", cv->ull);
         break;
     case TOK_CCHAR:
     case TOK_LCHAR:
@@ -21285,7 +21285,7 @@ static int64_t getclock_us(void)
 
 void help(void)
 {
-    printf("tcc version " TCC_VERSION " - Tiny C Compiler - Copyright (C) 2001-2011 Fabrice Bellard\n"
+    printf("tcc version " TCC_VERSION " - Tiny C Compiler - Copyright (C) 2001-2010 Fabrice Bellard\n"
            "usage: tcc [-v] [-c] [-o outfile] [-Bdir] [-bench] [-Idir] [-Dsym[=val]] [-Usym]\n"
            "           [-Wwarn] [-g] [-b] [-bt N] [-Ldir] [-llib] [-shared] [-static]\n"
            "           [infile1 infile2...] [-run infile args...]\n"
